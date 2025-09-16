@@ -1,6 +1,25 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { TauriAPI } from '../lib/tauri-api';
 import type { FileContent, FileDialogResult, SaveResult } from '../types/tauri';
+
+// Guards and validation
+const validateFileContent = (file: FileContent | null): boolean => {
+  if (!file) return false;
+  if (typeof file.name !== 'string') return false;
+  if (typeof file.content !== 'string') return false;
+  return true;
+};
+
+const validateContent = (content: unknown): content is string => {
+  return typeof content === 'string';
+};
+
+// Content change tracking to prevent race conditions
+interface ContentChangeTracker {
+  lastContent: string;
+  lastUpdateTime: number;
+  isProcessing: boolean;
+}
 
 export interface SimpleFileManagerState {
   currentFile: FileContent | null;
@@ -26,6 +45,13 @@ export function useSimpleFileManager(): [SimpleFileManagerState, SimpleFileManag
     isLoading: false,
     error: null,
     isSettingContent: false,
+  });
+
+  // Content change tracker to prevent race conditions
+  const contentTracker = useRef<ContentChangeTracker>({
+    lastContent: '',
+    lastUpdateTime: 0,
+    isProcessing: false,
   });
 
   const updateState = useCallback((updates: Partial<SimpleFileManagerState>) => {
@@ -112,8 +138,24 @@ export function useSimpleFileManager(): [SimpleFileManagerState, SimpleFileManag
     console.log('=== SAVING FILE ===');
     console.log('Current file:', state.currentFile);
     
+    // 🛡️ GUARD: Validate file exists
     if (!state.currentFile) {
+      console.error('🚨 GUARD: No file to save');
       updateState({ error: 'No file to save' });
+      return;
+    }
+
+    // 🛡️ GUARD: Validate file content structure
+    if (!validateFileContent(state.currentFile)) {
+      console.error('🚨 GUARD: Invalid file content structure');
+      updateState({ error: 'Invalid file content - cannot save' });
+      return;
+    }
+
+    // 🛡️ GUARD: Validate content is string
+    if (typeof state.currentFile.content !== 'string') {
+      console.error('🚨 GUARD: File content is not a string');
+      updateState({ error: 'Invalid file content type - cannot save' });
       return;
     }
 
@@ -211,58 +253,107 @@ export function useSimpleFileManager(): [SimpleFileManagerState, SimpleFileManag
   }, [state.currentFile, updateState]);
 
   const updateContent = useCallback((content: string) => {
+    // 🛡️ GUARD 1: Validate input
+    if (!validateContent(content)) {
+      console.error('🚨 GUARD VIOLATION: Invalid content type passed to updateContent:', typeof content);
+      return;
+    }
+
+    const now = Date.now();
+    
+    // 🛡️ GUARD 2: Prevent rapid successive calls (debounce)
+    if (contentTracker.current.isProcessing && (now - contentTracker.current.lastUpdateTime) < 50) {
+      console.log('⚡ GUARD: Debouncing rapid updateContent calls');
+      return;
+    }
+
+    // 🛡️ GUARD 3: Prevent duplicate content updates
+    if (contentTracker.current.lastContent === content) {
+      console.log('⚡ GUARD: Ignoring duplicate content update');
+      return;
+    }
+
     console.log('⚡ UPDATE CONTENT CALLED');
     console.log('  - New content length:', content.length);
     console.log('  - Current file:', state.currentFile?.name);
     console.log('  - Current file path:', state.currentFile?.path);
     console.log('  - Is setting content flag:', state.isSettingContent);
     
-    // If we're currently setting content from a loaded file, don't override it
+    // 🛡️ GUARD 4: If we're currently setting content from a loaded file, don't override it
     if (state.isSettingContent) {
       console.log('⚡ BLOCKED: Currently setting content from loaded file, ignoring updateContent call');
       return;
     }
+
+    // Update tracker
+    contentTracker.current = {
+      lastContent: content,
+      lastUpdateTime: now,
+      isProcessing: true,
+    };
     
-    setState(prevState => {
-      if (!prevState.currentFile) {
-        console.log('⚡ CREATING NEW FILE: No current file, creating new one with content');
-        // If no current file, create one with the content
-        const newFile: FileContent = {
-          id: Date.now().toString(),
-          name: 'Untitled',
-          path: undefined,
+    try {
+      setState(prevState => {
+        // 🛡️ GUARD 5: Validate current state
+        if (prevState.currentFile && !validateFileContent(prevState.currentFile)) {
+          console.error('🚨 GUARD VIOLATION: Invalid current file state');
+          return prevState; // Don't update if state is invalid
+        }
+
+        if (!prevState.currentFile) {
+          console.log('⚡ CREATING NEW FILE: No current file, creating new one with content');
+          // If no current file, create one with the content
+          const newFile: FileContent = {
+            id: Date.now().toString(),
+            name: 'Untitled',
+            path: undefined,
+            content,
+            lastModified: undefined,
+            isSaved: false,
+            fileType: 'Markdown' as any
+          };
+          
+          console.log('⚡ NEW FILE CREATED: Untitled');
+          return {
+            ...prevState,
+            currentFile: newFile, 
+            hasUnsavedChanges: content.length > 0 
+          };
+        }
+
+        // 🛡️ GUARD 6: Preserve file identity (name, path, etc.) when updating content
+        const updatedFile: FileContent = {
+          ...prevState.currentFile, // Keep all existing properties including name and path
           content,
-          lastModified: undefined,
-          isSaved: false,
-          fileType: 'Markdown' as any
+          isSaved: false, // Mark as unsaved since content changed
         };
+
+        // 🛡️ GUARD 7: Validate updated file before setting
+        if (!validateFileContent(updatedFile)) {
+          console.error('🚨 GUARD VIOLATION: Updated file would be invalid');
+          return prevState;
+        }
+
+        const hasChanges = content !== (prevState.currentFile.content || '');
         
-        console.log('⚡ NEW FILE CREATED: Untitled');
+        console.log('⚡ UPDATING EXISTING FILE:', updatedFile.name, 'Path:', updatedFile.path);
+        console.log('⚡ UPDATE COMPLETE: hasUnsavedChanges:', hasChanges);
+        
         return {
           ...prevState,
-          currentFile: newFile, 
-          hasUnsavedChanges: content.length > 0 
+          currentFile: updatedFile, 
+          hasUnsavedChanges: hasChanges 
         };
-      }
-
-      // IMPORTANT: Preserve the file identity (name, path, etc.) when updating content
-      const updatedFile: FileContent = {
-        ...prevState.currentFile, // Keep all existing properties including name and path
-        content,
-        isSaved: false, // Mark as unsaved since content changed
-      };
-
-      const hasChanges = content !== (prevState.currentFile.content || '');
-      
-      console.log('⚡ UPDATING EXISTING FILE:', updatedFile.name, 'Path:', updatedFile.path);
-      console.log('⚡ UPDATE COMPLETE: hasUnsavedChanges:', hasChanges);
-      
-      return {
-        ...prevState,
-        currentFile: updatedFile, 
-        hasUnsavedChanges: hasChanges 
-      };
-    });
+      });
+    } catch (error) {
+      console.error('🚨 ERROR in updateContent:', error);
+      // Don't crash, just log the error
+    } finally {
+      // Reset processing flag after a short delay
+      setTimeout(() => {
+        contentTracker.current.isProcessing = false;
+      }, 100);
+    }
   }, [state.isSettingContent]);
 
   const clearError = useCallback(() => {

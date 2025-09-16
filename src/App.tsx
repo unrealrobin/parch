@@ -6,6 +6,7 @@ import { TauriAPI } from "./lib/tauri-api";
 import type { WindowSettings } from "./types/tauri";
 import TextEditor from "./components/TextEditor";
 import DiagramViewer from "./components/DiagramViewer";
+import { ErrorBoundary, FileManagerErrorFallback } from "./components/ErrorBoundary";
 import { useTextEditor } from "./hooks/useTextEditor";
 import { useSimpleFileManager } from "./hooks/useSimpleFileManager";
 import type { ParsedDiagram } from "./types/editor";
@@ -324,8 +325,30 @@ function App() {
     console.log('  - Current file before change:', fileManagerState.currentFile?.name);
     console.log('  - Current file path before change:', fileManagerState.currentFile?.path);
     
-    // Update the file manager with the new content
-    fileManagerActions.updateContent(content);
+    try {
+      // 🛡️ GUARD: Validate content before processing
+      if (typeof content !== 'string') {
+        console.error('🚨 GUARD VIOLATION: handleEditorContentChange received non-string content:', typeof content);
+        return;
+      }
+
+      // 🛡️ GUARD: Ensure fileManagerActions exists and has updateContent method
+      if (!fileManagerActions || typeof fileManagerActions.updateContent !== 'function') {
+        console.error('🚨 GUARD VIOLATION: fileManagerActions.updateContent is not available');
+        return;
+      }
+
+      // Update the file manager with the new content
+      fileManagerActions.updateContent(content);
+      
+      console.log('🔥 EDITOR CONTENT CHANGE - SUCCESS');
+    } catch (error) {
+      console.error('🚨 ERROR in handleEditorContentChange:', error);
+      // Don't crash the app, but show user-friendly error
+      if (error instanceof Error) {
+        console.error('Error details:', error.message, error.stack);
+      }
+    }
     
     console.log('🔥 EDITOR CONTENT CHANGE - END');
   };
@@ -374,7 +397,8 @@ function App() {
   }, [fileManagerState.hasUnsavedChanges]);
 
   return (
-    <div className="app" ref={containerRef}>
+    <ErrorBoundary fallback={FileManagerErrorFallback}>
+      <div className="app" ref={containerRef}>
       {/* Custom Title Bar */}
       <div className="title-bar" data-tauri-drag-region>
         <div className="title-bar-title">
@@ -655,7 +679,8 @@ function App() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 }
 

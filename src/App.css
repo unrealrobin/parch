@@ -1235,4 +1235,93 @@ body {
   .toggle-switch:hover .toggle-slider {
     box-shadow: 0 0 0 3px rgba(47, 129, 247, 0.2);
   }
+}/* Er
+ror Boundary Styles */
+.error-boundary {
+  padding: 20px;
+  margin: 20px;
+  border: 2px solid #ff6b6b;
+  border-radius: 8px;
+  background-color: #ffe0e0;
+  color: #d63031;
+  font-family: monospace;
+}
+
+.error-boundary h2 {
+  margin-top: 0;
+  color: #d63031;
+}
+
+.error-boundary details {
+  margin: 10px 0;
+  border: 1px solid #ff9999;
+  border-radius: 4px;
+}
+
+.error-boundary summary {
+  padding: 8px;
+  background-color: #ffcccc;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.error-boundary button {
+  padding: 8px 16px;
+  background-color: #d63031;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.error-boundary button:hover {
+  background-color: #b71c1c;
+}
+
+.file-manager-error {
+  padding: 15px;
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 6px;
+  color: #856404;
+}
+
+.file-error-banner {
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  color: #721c24;
+  padding: 8px 12px;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.error-icon {
+  font-size: 16px;
+}
+
+.error-message {
+  flex: 1;
+}
+
+.error-dismiss {
+  background: none;
+  border: none;
+  color: #721c24;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.error-dismiss:hover {
+  background-color: rgba(114, 28, 36, 0.1);
+  border-radius: 2px;
 }
