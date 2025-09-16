@@ -15,6 +15,35 @@ export interface AppInfo {
   description: string;
 }
 
+// File management types
+export interface FileContent {
+  id: string;
+  name: string;
+  path?: string;
+  content: string;
+  lastModified?: string; // ISO string representation of SystemTime
+  isSaved: boolean;
+  fileType: FileType;
+}
+
+export enum FileType {
+  Markdown = "Markdown",
+  Mermaid = "Mermaid", 
+  MermaidMarkdown = "MermaidMarkdown"
+}
+
+export interface FileDialogResult {
+  success: boolean;
+  fileContent?: FileContent;
+  error?: string;
+}
+
+export interface SaveResult {
+  success: boolean;
+  filePath?: string;
+  error?: string;
+}
+
 // Window management commands
 export declare function setAlwaysOnTop(enabled: boolean): Promise<void>;
 export declare function setClickThrough(enabled: boolean): Promise<void>;

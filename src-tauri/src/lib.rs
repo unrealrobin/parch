@@ -4,7 +4,10 @@ use std::sync::{Mutex, LazyLock};
 use std::collections::HashMap;
 
 mod mermaid_parser;
+mod file_manager;
+
 use mermaid_parser::{MermaidParser, ParseResult, ValidationResult};
+use file_manager::{FileManager, FileContent, FileDialogResult, SaveResult};
 
 // Data structures for application state
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -214,6 +217,41 @@ async fn get_parsing_stats(content: String) -> Result<serde_json::Value, String>
     Ok(serde_json::to_value(stats).unwrap_or_default())
 }
 
+// File management commands
+#[tauri::command]
+async fn create_new_file() -> Result<FileContent, String> {
+    Ok(FileManager::create_new_file())
+}
+
+#[tauri::command]
+async fn open_file_dialog(window: tauri::Window) -> Result<FileDialogResult, String> {
+    FileManager::open_file_dialog(window).await
+}
+
+#[tauri::command]
+async fn save_file(file_content: FileContent) -> Result<SaveResult, String> {
+    FileManager::save_file(&file_content)
+}
+
+#[tauri::command]
+async fn save_file_as_dialog(
+    window: tauri::Window,
+    content: String,
+    suggested_name: Option<String>,
+) -> Result<SaveResult, String> {
+    FileManager::save_file_as_dialog(window, &content, suggested_name.as_deref()).await
+}
+
+#[tauri::command]
+async fn check_file_modified(file_content: FileContent) -> Result<bool, String> {
+    FileManager::check_file_modified(&file_content)
+}
+
+#[tauri::command]
+async fn get_supported_extensions() -> Result<Vec<String>, String> {
+    Ok(FileManager::get_supported_extensions().iter().map(|s| s.to_string()).collect())
+}
+
 // Basic application commands
 #[tauri::command]
 async fn get_app_version() -> String {
@@ -255,6 +293,12 @@ pub fn run() {
             validate_mermaid_diagram,
             detect_diagram_type,
             get_parsing_stats,
+            create_new_file,
+            open_file_dialog,
+            save_file,
+            save_file_as_dialog,
+            check_file_modified,
+            get_supported_extensions,
             get_app_version,
             get_app_info
         ])

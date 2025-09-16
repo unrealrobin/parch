@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 
@@ -7,6 +7,7 @@ import type { WindowSettings } from "./types/tauri";
 import TextEditor from "./components/TextEditor";
 import DiagramViewer from "./components/DiagramViewer";
 import { useTextEditor } from "./hooks/useTextEditor";
+import { useSimpleFileManager } from "./hooks/useSimpleFileManager";
 import type { ParsedDiagram } from "./types/editor";
 import "./App.css";
 import "./components/TextEditor.css";
@@ -26,23 +27,67 @@ function App() {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [activeDiagramIndex, setActiveDiagramIndex] = useState(-1);
 
+  // File management state
+  const [fileManagerState, fileManagerActions] = useSimpleFileManager();
+  
+  // Debug file manager state changes (can be removed later)
+  useEffect(() => {
+    if (fileManagerState.error) {
+      console.error('File manager error:', fileManagerState.error);
+    }
+  }, [fileManagerState.error]);
+
   // Save theme preference when it changes
   useEffect(() => {
     localStorage.setItem('parch-theme', theme);
   }, [theme]);
+
+  // Handle file opening - simplified
+  const handleOpenFile = useCallback(async () => {
+    console.log('🚀 STARTING FILE OPEN PROCESS');
+    await fileManagerActions.openFile();
+    console.log('🚀 FILE OPEN PROCESS COMPLETE');
+  }, [fileManagerActions]);
+
+  // File content is automatically synced through editorContent derivation
+  // No need for a separate sync effect since editorContent is derived from fileManagerState
+
+  // Update window title based on file state
+  useEffect(() => {
+    const title = fileManagerState.currentFile 
+      ? `${fileManagerState.currentFile.name}${fileManagerState.hasUnsavedChanges ? ' *' : ''} - Parch`
+      : 'Parch - UML Float';
+    
+    console.log('📋 TITLE UPDATE:', title);
+    console.log('  - File name:', fileManagerState.currentFile?.name);
+    console.log('  - File path:', fileManagerState.currentFile?.path);
+    console.log('  - Has unsaved changes:', fileManagerState.hasUnsavedChanges);
+    
+    document.title = title;
+  }, [fileManagerState.currentFile?.name, fileManagerState.currentFile?.path, fileManagerState.hasUnsavedChanges]);
   
-  // Text editor state management
+  // Use file manager as single source of truth for content
+  const editorContent = fileManagerState.currentFile?.content || "";
+  
+  // We don't need setEditorContent since editorContent is derived from fileManagerState
+  
+  // Text editor state management for diagrams (keeping for diagram parsing)
   const {
-    content: editorContent,
-    setContent: setEditorContent,
+    content: _,
+    setContent: setTextEditorContent,
     diagrams,
-    errors,
+    errors: _errors,
     setCursorPosition
   } = useTextEditor({
-    initialContent: "```mermaid\ngraph TD\n    A[Start] --> B[Process]\n    B --> C[End]\n```",
+    initialContent: "",
     validateOnChange: true,
     debounceMs: 300
   });
+
+  // Sync editor content with text editor for diagram parsing
+  useEffect(() => {
+    setTextEditorContent(editorContent);
+  }, [editorContent, setTextEditorContent]);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -259,24 +304,85 @@ function App() {
     alert(`Export functionality will be implemented in task 9.\nDiagram: ${diagram.type} (${diagram.id})`);
   };
 
-  // Handle cursor position changes to update active diagram
-  const handleCursorChange = (position: { line: number; column: number }) => {
-    setCursorPosition(position);
+  // Handle cursor position changes to update active diagram (simplified for now)
+  // const handleCursorChange = (position: { line: number; column: number }) => {
+  //   setCursorPosition(position);
     
-    if (diagrams.length === 0) return;
+  //   if (diagrams.length === 0) return;
     
-    const diagramIndex = diagrams.findIndex(diagram => 
-      position.line >= diagram.startLine && position.line <= diagram.endLine
-    );
+  //   const diagramIndex = diagrams.findIndex(diagram => 
+  //     position.line >= diagram.startLine && position.line <= diagram.endLine
+  //   );
     
-    setActiveDiagramIndex(diagramIndex);
+  //   setActiveDiagramIndex(diagramIndex);
+  // };
+
+  // Handle content changes from text editor
+  const handleEditorContentChange = (content: string) => {
+    console.log('🔥 EDITOR CONTENT CHANGE - START');
+    console.log('  - New content length:', content.length);
+    console.log('  - Current file before change:', fileManagerState.currentFile?.name);
+    console.log('  - Current file path before change:', fileManagerState.currentFile?.path);
+    
+    // Update the file manager with the new content
+    fileManagerActions.updateContent(content);
+    
+    console.log('🔥 EDITOR CONTENT CHANGE - END');
   };
+
+  // Keyboard shortcuts for file operations
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey || event.metaKey) {
+        switch (event.key) {
+          case 'n':
+            event.preventDefault();
+            fileManagerActions.createNewFile();
+            break;
+          case 'o':
+            event.preventDefault();
+            handleOpenFile();
+            break;
+          case 's':
+            event.preventDefault();
+            if (event.shiftKey) {
+              fileManagerActions.saveFileAs();
+            } else {
+              fileManagerActions.saveFile();
+            }
+            break;
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [fileManagerActions]);
+
+  // Handle window close event to check for unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = async (event: BeforeUnloadEvent) => {
+      if (fileManagerState.hasUnsavedChanges) {
+        event.preventDefault();
+        event.returnValue = 'You have unsaved changes. Are you sure you want to close?';
+        return event.returnValue;
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [fileManagerState.hasUnsavedChanges]);
 
   return (
     <div className="app" ref={containerRef}>
       {/* Custom Title Bar */}
       <div className="title-bar" data-tauri-drag-region>
-        <div className="title-bar-title">Parch - UML Float</div>
+        <div className="title-bar-title">
+          {fileManagerState.currentFile 
+            ? `${fileManagerState.currentFile.name}${fileManagerState.hasUnsavedChanges ? ' *' : ''} - Parch`
+            : 'Parch - UML Float'
+          }
+        </div>
         <div className="title-bar-actions">
           {showSettings ? (
             <button
@@ -289,6 +395,42 @@ function App() {
             </button>
           ) : (
             <>
+              <button
+                className="file-button"
+                onClick={fileManagerActions.createNewFile}
+                title="New File (Ctrl+N)"
+                type="button"
+                disabled={fileManagerState.isLoading}
+              >
+                {fileManagerState.isLoading ? '⏳' : '📄'} New
+              </button>
+              <button
+                className="file-button"
+                onClick={handleOpenFile}
+                title="Open File (Ctrl+O)"
+                type="button"
+                disabled={fileManagerState.isLoading}
+              >
+                {fileManagerState.isLoading ? '⏳' : '📁'} Open
+              </button>
+              <button
+                className="file-button"
+                onClick={fileManagerActions.saveFile}
+                title="Save File (Ctrl+S)"
+                type="button"
+                disabled={fileManagerState.isLoading || !fileManagerState.currentFile}
+              >
+                {fileManagerState.isLoading ? '⏳' : '💾'} Save
+              </button>
+              <button
+                className="file-button"
+                onClick={fileManagerActions.saveFileAs}
+                title="Save As (Ctrl+Shift+S)"
+                type="button"
+                disabled={fileManagerState.isLoading || !fileManagerState.currentFile}
+              >
+                {fileManagerState.isLoading ? '⏳' : '💾'} Save As
+              </button>
               <button
                 className="theme-toggle-button"
                 onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
@@ -462,11 +604,34 @@ function App() {
             className="editor-pane"
             style={{ width: `${splitPosition}%` }}
           >
+            {fileManagerState.error && (
+              <div className="file-error-banner">
+                <span className="error-icon">⚠️</span>
+                <span className="error-message">{fileManagerState.error}</span>
+                <button 
+                  className="error-dismiss"
+                  onClick={fileManagerActions.clearError}
+                  title="Dismiss error"
+                >
+                  ×
+                </button>
+              </div>
+            )}
+
             <TextEditor
               content={editorContent}
-              onChange={setEditorContent}
-              onCursorChange={handleCursorChange}
-              errors={errors}
+              onChange={handleEditorContentChange}
+              onCursorChange={(position) => {
+                setCursorPosition(position);
+                // Update active diagram based on cursor position
+                if (diagrams.length > 0) {
+                  const diagramIndex = diagrams.findIndex(diagram => 
+                    position.line >= diagram.startLine && position.line <= diagram.endLine
+                  );
+                  setActiveDiagramIndex(diagramIndex);
+                }
+              }}
+              errors={_errors}
               theme={theme}
             />
           </div>

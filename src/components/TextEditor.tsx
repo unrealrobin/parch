@@ -42,7 +42,7 @@ const TextEditor: React.FC<TextEditorProps> = ({
       timeoutId = setTimeout(() => {
         const value = editor.getValue();
         onChange(value);
-      }, 300); // 300ms debounce for real-time validation
+      }, 300); // 300ms debounce for performance
     });
 
     setIsEditorReady(true);
@@ -226,6 +226,11 @@ const TextEditor: React.FC<TextEditorProps> = ({
         value={content}
         theme={theme === 'dark' ? 'mermaid-dark' : 'mermaid-light'}
         onMount={handleEditorDidMount}
+        onChange={(value) => {
+          if (value !== undefined) {
+            onChange(value);
+          }
+        }}
         options={{
           readOnly,
           minimap: { enabled: true },

@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import type { WindowSettings, AppInfo } from '../types/tauri';
+import type { WindowSettings, AppInfo, FileContent, FileDialogResult, SaveResult } from '../types/tauri';
 
 /**
  * Tauri API wrapper for Parch application commands
@@ -127,5 +127,32 @@ export class TauriAPI {
 
   static async getParsingStats(content: string): Promise<any> {
     return invoke('get_parsing_stats', { content });
+  }
+
+  /**
+   * File management commands
+   */
+  static async createNewFile(): Promise<FileContent> {
+    return invoke('create_new_file');
+  }
+
+  static async openFileDialog(): Promise<FileDialogResult> {
+    return invoke('open_file_dialog');
+  }
+
+  static async saveFile(fileContent: FileContent): Promise<SaveResult> {
+    return invoke('save_file', { fileContent });
+  }
+
+  static async saveFileAsDialog(content: string, suggestedName?: string): Promise<SaveResult> {
+    return invoke('save_file_as_dialog', { content, suggestedName });
+  }
+
+  static async checkFileModified(fileContent: FileContent): Promise<boolean> {
+    return invoke('check_file_modified', { fileContent });
+  }
+
+  static async getSupportedExtensions(): Promise<string[]> {
+    return invoke('get_supported_extensions');
   }
 }

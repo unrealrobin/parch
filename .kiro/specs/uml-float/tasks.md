@@ -21,18 +21,22 @@
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 7.1, 7.2, 7.3, 7.4_
 
 - [x] 4. Implement Mermaid diagram parsing and rendering
-
-
-
-
-
   - Create Rust-based Mermaid content parser
   - Implement multiple diagram detection in single document
   - Add diagram rendering with Mermaid.js integration
   - Create diagram-to-editor linking functionality
   - _Requirements: 1.3, 1.4, 11.1, 11.2, 11.3, 11.4, 11.5_
 
-- [ ] 5. Build file management system
+- [x] 5. Build file management system
+
+
+
+
+
+
+
+
+
   - Implement file creation, opening, and saving operations
   - Add file dialog integration using Tauri APIs
   - Create unsaved changes tracking and prompts
