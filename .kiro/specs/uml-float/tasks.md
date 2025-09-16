@@ -15,7 +15,19 @@
   - Set up build scripts and development environment
   - _Requirements: 6.1, 6.2, 6.3, 6.4_
 
-- [ ] 2. Implement basic window management functionality
+- [x] 2. Implement basic window management functionality
+
+
+
+
+
+
+
+
+
+
+
+
   - Create main window with split-pane layout
   - Implement always-on-top window behavior
   - Add opacity control functionality

@@ -19,10 +19,12 @@ export class TauriAPI {
     return invoke('set_click_through', { enabled });
   }
 
-  // Note: Opacity functionality will be implemented in a later task
-  // static async setOpacity(opacity: number): Promise<void> {
-  //   return invoke('set_opacity', { opacity });
-  // }
+  /**
+   * Set window opacity (0.1 to 1.0)
+   */
+  static async setOpacity(opacity: number): Promise<void> {
+    return invoke('set_opacity', { opacity });
+  }
 
   /**
    * Get current window settings
@@ -46,6 +48,27 @@ export class TauriAPI {
   }
 
   /**
+   * Save current window state
+   */
+  static async saveWindowState(): Promise<void> {
+    return invoke('save_window_state');
+  }
+
+  /**
+   * Restore window state
+   */
+  static async restoreWindowState(): Promise<void> {
+    return invoke('restore_window_state');
+  }
+
+  /**
+   * Set split pane size (0.1 to 0.9)
+   */
+  static async setSplitPaneSize(size: number): Promise<void> {
+    return invoke('set_split_pane_size', { size });
+  }
+
+  /**
    * Apply multiple window settings at once
    */
   static async applyWindowSettings(settings: Partial<WindowSettings>): Promise<void> {
@@ -57,7 +80,33 @@ export class TauriAPI {
     if (settings.clickThrough !== undefined) {
       promises.push(this.setClickThrough(settings.clickThrough));
     }
+    if (settings.splitPaneSize !== undefined) {
+      promises.push(this.setSplitPaneSize(settings.splitPaneSize));
+    }
     
     await Promise.all(promises);
+  }
+
+  /**
+   * Window control commands
+   */
+  static async minimizeWindow(): Promise<void> {
+    return invoke('minimize_window');
+  }
+
+  static async maximizeWindow(): Promise<void> {
+    return invoke('maximize_window');
+  }
+
+  static async unmaximizeWindow(): Promise<void> {
+    return invoke('unmaximize_window');
+  }
+
+  static async closeWindow(): Promise<void> {
+    return invoke('close_window');
+  }
+
+  static async isWindowMaximized(): Promise<boolean> {
+    return invoke('is_window_maximized');
   }
 }
