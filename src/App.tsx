@@ -5,9 +5,12 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import { TauriAPI } from "./lib/tauri-api";
 import type { WindowSettings } from "./types/tauri";
 import TextEditor from "./components/TextEditor";
+import DiagramViewer from "./components/DiagramViewer";
 import { useTextEditor } from "./hooks/useTextEditor";
+import type { ParsedDiagram } from "./types/editor";
 import "./App.css";
 import "./components/TextEditor.css";
+import "./components/DiagramViewer.css";
 
 function App() {
   const [windowSettings, setWindowSettings] = useState<WindowSettings>({
@@ -21,6 +24,7 @@ function App() {
   const [isDragging, setIsDragging] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [activeDiagramIndex, setActiveDiagramIndex] = useState(-1);
 
   // Save theme preference when it changes
   useEffect(() => {
@@ -33,7 +37,6 @@ function App() {
     setContent: setEditorContent,
     diagrams,
     errors,
-    isValidating,
     setCursorPosition
   } = useTextEditor({
     initialContent: "```mermaid\ngraph TD\n    A[Start] --> B[Process]\n    B --> C[End]\n```",
@@ -234,6 +237,41 @@ function App() {
     }
   }, [isDragging]);
 
+  // Diagram interaction handlers
+  const handleDiagramClick = (index: number) => {
+    setActiveDiagramIndex(index);
+    const diagram = diagrams[index];
+    if (diagram) {
+      // Focus the editor on the diagram's start line
+      setCursorPosition({ line: diagram.startLine, column: 1 });
+    }
+  };
+
+  const handleDiagramShare = (diagram: ParsedDiagram) => {
+    // TODO: Implement sharing functionality in future tasks
+    console.log('Share diagram:', diagram.id);
+    alert(`Sharing functionality will be implemented in task 9.\nDiagram: ${diagram.type} (${diagram.id})`);
+  };
+
+  const handleDiagramExport = (diagram: ParsedDiagram) => {
+    // TODO: Implement export functionality in future tasks
+    console.log('Export diagram:', diagram.id);
+    alert(`Export functionality will be implemented in task 9.\nDiagram: ${diagram.type} (${diagram.id})`);
+  };
+
+  // Handle cursor position changes to update active diagram
+  const handleCursorChange = (position: { line: number; column: number }) => {
+    setCursorPosition(position);
+    
+    if (diagrams.length === 0) return;
+    
+    const diagramIndex = diagrams.findIndex(diagram => 
+      position.line >= diagram.startLine && position.line <= diagram.endLine
+    );
+    
+    setActiveDiagramIndex(diagramIndex);
+  };
+
   return (
     <div className="app" ref={containerRef}>
       {/* Custom Title Bar */}
@@ -427,7 +465,7 @@ function App() {
             <TextEditor
               content={editorContent}
               onChange={setEditorContent}
-              onCursorChange={setCursorPosition}
+              onCursorChange={handleCursorChange}
               errors={errors}
               theme={theme}
             />
@@ -442,68 +480,14 @@ function App() {
             className="diagram-pane"
             style={{ width: `${100 - splitPosition}%` }}
           >
-          <div className="diagram-content">
-            {diagrams.length > 0 ? (
-              <div className="diagrams-container">
-                <div className="diagrams-header">
-                  <h3>Diagrams ({diagrams.length})</h3>
-                  {isValidating && <span className="validating">Validating...</span>}
-                  {errors.length > 0 && (
-                    <span className="error-count">
-                      {errors.length} error{errors.length !== 1 ? 's' : ''}
-                    </span>
-                  )}
-                </div>
-                <div className="diagrams-list">
-                  {diagrams.map((diagram) => (
-                    <div 
-                      key={diagram.id} 
-                      className={`diagram-item ${diagram.hasError ? 'has-error' : 'valid'}`}
-                    >
-                      <div className="diagram-header">
-                        <span className="diagram-type">{diagram.type}</span>
-                        <span className="diagram-lines">
-                          Lines {diagram.startLine}-{diagram.endLine}
-                        </span>
-                        {diagram.hasError && (
-                          <span className="error-indicator">⚠️</span>
-                        )}
-                      </div>
-                      {diagram.hasError && diagram.errorMessage && (
-                        <div className="diagram-error">
-                          {diagram.errorMessage}
-                        </div>
-                      )}
-                      <div className="diagram-preview">
-                        {diagram.hasError ? (
-                          <div className="error-placeholder">
-                            Fix syntax errors to see diagram
-                          </div>
-                        ) : (
-                          <div className="render-placeholder">
-                            Diagram rendering will be implemented in task 4
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="empty-state">
-                <h3>No diagrams found</h3>
-                <p>Start typing Mermaid syntax in code blocks:</p>
-                <pre className="example-code">
-{`\`\`\`mermaid
-graph TD
-    A[Start] --> B[Process]
-    B --> C[End]
-\`\`\``}
-                </pre>
-              </div>
-            )}
+            <DiagramViewer
+              diagrams={diagrams}
+              activeIndex={activeDiagramIndex}
+              onDiagramClick={handleDiagramClick}
+              onDiagramShare={handleDiagramShare}
+              onDiagramExport={handleDiagramExport}
+            />
           </div>
-        </div>
         </div>
       )}
     </div>

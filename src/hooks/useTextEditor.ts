@@ -46,8 +46,8 @@ export const useTextEditor = (options: UseTextEditorOptions = {}): UseTextEditor
     setIsValidating(true);
     
     try {
-      // Parse diagrams from content
-      const parsedDiagrams = mermaidParser.parseContent(content);
+      // Parse diagrams from content using async method (Rust backend)
+      const parsedDiagrams = await mermaidParser.parseContentAsync(content);
       setDiagrams(parsedDiagrams);
 
       // Collect all validation errors

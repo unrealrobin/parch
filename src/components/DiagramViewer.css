@@ -1,0 +1,285 @@
+/* DiagramViewer Component Styles */
+
+.diagram-viewer {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.diagram-viewer-empty {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.diagrams-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  flex-shrink: 0;
+}
+
+.diagrams-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.rendering-indicator {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.rendering-indicator::before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--accent-color);
+  border-top: 2px solid transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.diagrams-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem;
+}
+
+.diagram-item {
+  margin-bottom: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-primary);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.diagram-item:hover {
+  border-color: var(--accent-color);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.diagram-item.active {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.diagram-item.has-error {
+  border-color: var(--error-color);
+  background: var(--error-bg);
+}
+
+.diagram-item.has-error:hover {
+  border-color: var(--error-color);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2);
+}
+
+.diagram-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  border-radius: 8px 8px 0 0;
+}
+
+.diagram-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.diagram-type {
+  font-weight: 600;
+  color: var(--accent-color);
+  text-transform: capitalize;
+  font-size: 0.875rem;
+}
+
+.diagram-lines {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.diagram-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.action-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  font-size: 1rem;
+  transition: background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-button:hover {
+  background: var(--bg-tertiary);
+}
+
+.action-button.share:hover {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.action-button.export:hover {
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.error-indicator {
+  font-size: 1rem;
+  color: var(--error-color);
+  cursor: help;
+}
+
+.diagram-error {
+  padding: 0.75rem 1rem;
+  background: var(--error-bg);
+  border-left: 4px solid var(--error-color);
+  font-size: 0.875rem;
+  color: var(--error-text);
+  margin: 0;
+}
+
+.diagram-error strong {
+  color: var(--error-color);
+}
+
+.diagram-content {
+  padding: 1rem;
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.diagram-svg {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.diagram-svg svg {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+
+.diagram-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--border-color);
+  border-top: 2px solid var(--accent-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.error-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  font-style: italic;
+  text-align: center;
+  padding: 2rem;
+}
+
+.empty-state {
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.empty-state h3 {
+  margin: 0 0 1rem 0;
+  color: var(--text-primary);
+}
+
+.empty-state p {
+  margin: 0 0 1rem 0;
+}
+
+.example-code {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 1rem;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.875rem;
+  text-align: left;
+  color: var(--text-primary);
+  overflow-x: auto;
+}
+
+/* Animation keyframes */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .diagrams-header {
+    padding: 0.75rem;
+  }
+  
+  .diagram-header {
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .diagram-info {
+    gap: 0.5rem;
+  }
+  
+  .diagram-content {
+    padding: 0.75rem;
+    min-height: 150px;
+  }
+}
+
+/* Dark theme adjustments */
+[data-theme="dark"] .diagram-svg svg {
+  filter: brightness(0.9);
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .diagram-item {
+    border-width: 2px;
+  }
+  
+  .diagram-item.active {
+    border-width: 3px;
+  }
+}

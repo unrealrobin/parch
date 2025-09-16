@@ -109,4 +109,23 @@ export class TauriAPI {
   static async isWindowMaximized(): Promise<boolean> {
     return invoke('is_window_maximized');
   }
+
+  /**
+   * Mermaid parsing commands
+   */
+  static async parseMermaidContent(content: string): Promise<any> {
+    return invoke('parse_mermaid_content', { content });
+  }
+
+  static async validateMermaidDiagram(content: string, startLine?: number): Promise<any> {
+    return invoke('validate_mermaid_diagram', { content, startLine });
+  }
+
+  static async detectDiagramType(content: string): Promise<string> {
+    return invoke('detect_diagram_type', { content });
+  }
+
+  static async getParsingStats(content: string): Promise<any> {
+    return invoke('get_parsing_stats', { content });
+  }
 }

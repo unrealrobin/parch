@@ -1,4 +1,5 @@
 import mermaid from 'mermaid';
+import { TauriAPI } from './tauri-api';
 import type { ParsedDiagram, ValidationResult, SyntaxError, MermaidParserInterface } from '../types/editor';
 
 // Initialize Mermaid with configuration
@@ -22,7 +23,7 @@ mermaid.initialize({
 
 export class MermaidParser implements MermaidParserInterface {
   private static instance: MermaidParser;
-  private diagramCounter = 0;
+  private useRustParser = true;
 
   static getInstance(): MermaidParser {
     if (!MermaidParser.instance) {
@@ -32,15 +33,48 @@ export class MermaidParser implements MermaidParserInterface {
   }
 
   /**
-   * Parse content to extract Mermaid diagrams
+   * Parse content to extract Mermaid diagrams using Rust backend
+   */
+  async parseContentAsync(content: string): Promise<ParsedDiagram[]> {
+    if (this.useRustParser) {
+      try {
+        const result = await TauriAPI.parseMermaidContent(content);
+        return result.diagrams.map((diagram: any) => ({
+          id: diagram.id,
+          type: diagram.diagram_type,
+          content: diagram.content,
+          startLine: diagram.start_line,
+          endLine: diagram.end_line,
+          hasError: diagram.has_error,
+          errorMessage: diagram.error_message,
+        }));
+      } catch (error) {
+        console.warn('Rust parser failed, falling back to JavaScript parser:', error);
+        this.useRustParser = false;
+      }
+    }
+    
+    // Fallback to JavaScript parser
+    return this.parseContentSync(content);
+  }
+
+  /**
+   * Synchronous parsing for backward compatibility
    */
   parseContent(content: string): ParsedDiagram[] {
+    return this.parseContentSync(content);
+  }
+
+  /**
+   * JavaScript-based parsing (fallback)
+   */
+  private parseContentSync(content: string): ParsedDiagram[] {
     const diagrams: ParsedDiagram[] = [];
     const lines = content.split('\n');
     let inCodeBlock = false;
     let currentDiagram: string[] = [];
     let startLine = -1;
-    // let diagramType = ''; // Will be detected from content
+    let diagramCounter = 0;
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
@@ -61,7 +95,7 @@ export class MermaidParser implements MermaidParserInterface {
           const validation = this.validateDiagram(diagramContent);
           
           diagrams.push({
-            id: `diagram-${++this.diagramCounter}`,
+            id: `diagram-${++diagramCounter}`,
             type,
             content: diagramContent,
             startLine,
@@ -89,7 +123,7 @@ export class MermaidParser implements MermaidParserInterface {
       const validation = this.validateDiagram(diagramContent);
       
       diagrams.push({
-        id: `diagram-${++this.diagramCounter}`,
+        id: `diagram-${++diagramCounter}`,
         type,
         content: diagramContent,
         startLine,

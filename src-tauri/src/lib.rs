@@ -3,6 +3,9 @@ use serde::{Deserialize, Serialize};
 use std::sync::{Mutex, LazyLock};
 use std::collections::HashMap;
 
+mod mermaid_parser;
+use mermaid_parser::{MermaidParser, ParseResult, ValidationResult};
+
 // Data structures for application state
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WindowSettings {
@@ -17,6 +20,11 @@ pub struct WindowSettings {
 // Global state to track window settings
 static WINDOW_STATE: LazyLock<Mutex<HashMap<String, WindowSettings>>> = LazyLock::new(|| {
     Mutex::new(HashMap::new())
+});
+
+// Global Mermaid parser instance
+static MERMAID_PARSER: LazyLock<MermaidParser> = LazyLock::new(|| {
+    MermaidParser::new().expect("Failed to initialize Mermaid parser")
 });
 
 impl Default for WindowSettings {
@@ -180,6 +188,32 @@ async fn is_window_maximized(window: tauri::Window) -> Result<bool, String> {
     window.is_maximized().map_err(|e| e.to_string())
 }
 
+// Mermaid parsing commands
+#[tauri::command]
+async fn parse_mermaid_content(content: String) -> Result<ParseResult, String> {
+    let parser = &*MERMAID_PARSER;
+    Ok(parser.parse_content(&content))
+}
+
+#[tauri::command]
+async fn validate_mermaid_diagram(content: String, start_line: Option<usize>) -> Result<ValidationResult, String> {
+    let parser = &*MERMAID_PARSER;
+    Ok(parser.validate_diagram(&content, start_line.unwrap_or(1)))
+}
+
+#[tauri::command]
+async fn detect_diagram_type(content: String) -> Result<String, String> {
+    let parser = &*MERMAID_PARSER;
+    Ok(parser.detect_diagram_type(&content))
+}
+
+#[tauri::command]
+async fn get_parsing_stats(content: String) -> Result<serde_json::Value, String> {
+    let parser = &*MERMAID_PARSER;
+    let stats = parser.get_parsing_stats(&content);
+    Ok(serde_json::to_value(stats).unwrap_or_default())
+}
+
 // Basic application commands
 #[tauri::command]
 async fn get_app_version() -> String {
@@ -217,6 +251,10 @@ pub fn run() {
             unmaximize_window,
             close_window,
             is_window_maximized,
+            parse_mermaid_content,
+            validate_mermaid_diagram,
+            detect_diagram_type,
+            get_parsing_stats,
             get_app_version,
             get_app_info
         ])
@@ -235,7 +273,6 @@ pub fn run() {
             // Additional Windows-specific configuration
             #[cfg(target_os = "windows")]
             {
-                use tauri::Manager;
                 // Try to remove the title bar using Windows-specific methods
                 if let Err(e) = window.set_decorations(false) {
                     eprintln!("Windows decoration removal failed: {}", e);
