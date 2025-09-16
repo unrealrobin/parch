@@ -1,40 +1,24 @@
 # Implementation Plan
 
 - [x] 1. Set up Tauri project structure and core configuration
-
-
-
-
-
-
-
-
-
   - Initialize Tauri project with Rust backend and React frontend
   - Configure Tauri permissions and security settings
   - Set up build scripts and development environment
   - _Requirements: 6.1, 6.2, 6.3, 6.4_
 
 - [x] 2. Implement basic window management functionality
-
-
-
-
-
-
-
-
-
-
-
-
   - Create main window with split-pane layout
   - Implement always-on-top window behavior
   - Add opacity control functionality
   - Implement click-through mode
   - _Requirements: 2.1, 2.2, 2.3, 3.1, 3.2, 3.3_
 
-- [ ] 3. Create text editor component with Mermaid support
+- [x] 3. Create text editor component with Mermaid support
+
+
+
+
+
   - Integrate Monaco Editor with React frontend
   - Add Mermaid syntax highlighting
   - Implement real-time syntax validation

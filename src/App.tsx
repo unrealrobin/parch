@@ -4,7 +4,10 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 
 import { TauriAPI } from "./lib/tauri-api";
 import type { WindowSettings } from "./types/tauri";
+import TextEditor from "./components/TextEditor";
+import { useTextEditor } from "./hooks/useTextEditor";
 import "./App.css";
+import "./components/TextEditor.css";
 
 function App() {
   const [windowSettings, setWindowSettings] = useState<WindowSettings>({
@@ -16,8 +19,27 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [splitPosition, setSplitPosition] = useState(50);
   const [isDragging, setIsDragging] = useState(false);
-  const [editorContent, setEditorContent] = useState("");
   const [isMaximized, setIsMaximized] = useState(false);
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+
+  // Save theme preference when it changes
+  useEffect(() => {
+    localStorage.setItem('parch-theme', theme);
+  }, [theme]);
+  
+  // Text editor state management
+  const {
+    content: editorContent,
+    setContent: setEditorContent,
+    diagrams,
+    errors,
+    isValidating,
+    setCursorPosition
+  } = useTextEditor({
+    initialContent: "```mermaid\ngraph TD\n    A[Start] --> B[Process]\n    B --> C[End]\n```",
+    validateOnChange: true,
+    debounceMs: 300
+  });
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -28,6 +50,15 @@ function App() {
       // Apply initial opacity
       document.body.style.opacity = settings.opacity.toString();
     }).catch(console.error);
+
+    // Load saved theme or detect system preference
+    const savedTheme = localStorage.getItem('parch-theme') as 'light' | 'dark' | null;
+    if (savedTheme) {
+      setTheme(savedTheme);
+    } else {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      setTheme(mediaQuery.matches ? 'dark' : 'light');
+    }
 
     // Listen for opacity changes from the backend
     const unlistenOpacity = listen<number>('opacity-changed', (event) => {
@@ -208,6 +239,37 @@ function App() {
       {/* Custom Title Bar */}
       <div className="title-bar" data-tauri-drag-region>
         <div className="title-bar-title">Parch - UML Float</div>
+        <div className="title-bar-actions">
+          {showSettings ? (
+            <button
+              className="home-button"
+              onClick={() => setShowSettings(false)}
+              title="Back to workspace"
+              type="button"
+            >
+              🏠 Home
+            </button>
+          ) : (
+            <>
+              <button
+                className="theme-toggle-button"
+                onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+                title={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
+                type="button"
+              >
+                {theme === 'light' ? '🌙' : '☀️'}
+              </button>
+              <button
+                className="settings-button-titlebar"
+                onClick={() => setShowSettings(true)}
+                title="Settings"
+                type="button"
+              >
+                ⚙️
+              </button>
+            </>
+          )}
+        </div>
         <div className="title-bar-controls">
           <button 
             className="title-bar-button minimize" 
@@ -242,103 +304,208 @@ function App() {
         </div>
       </div>
 
-      {showSettings && (
-        <div className="settings-overlay">
-          <div className="settings-panel">
-            <div className="settings-header">
-              <h3>Settings</h3>
-              <button
-                className="close-button"
-                onClick={() => setShowSettings(false)}
-              >
-                ×
-              </button>
-            </div>
+      {showSettings ? (
+        <div className="settings-fullscreen">
+          <div className="settings-container">
+            <div className="settings-main">
+              <h1 className="settings-title">Settings</h1>
+              
+              <div className="settings-sections">
+                <section className="settings-section">
+                  <h2 className="section-title">Appearance</h2>
+                  <div className="settings-grid">
+                    <div className="setting-card">
+                      <div className="setting-header">
+                        <h3>Theme</h3>
+                        <p>Choose your preferred color scheme</p>
+                      </div>
+                      <div className="setting-control">
+                        <select
+                          value={theme}
+                          onChange={(e) => setTheme(e.target.value as 'light' | 'dark')}
+                          className="theme-selector-large"
+                        >
+                          <option value="light">Light</option>
+                          <option value="dark">Dark</option>
+                        </select>
+                      </div>
+                    </div>
 
-            <div className="settings-content">
-              <div className="setting-item">
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={windowSettings.alwaysOnTop}
-                    onChange={(e) => handleSettingChange('alwaysOnTop', e.target.checked)}
-                  />
-                  Always on Top
-                </label>
-              </div>
+                    <div className="setting-card">
+                      <div className="setting-header">
+                        <h3>Window Opacity</h3>
+                        <p>Adjust window transparency ({Math.round(windowSettings.opacity * 100)}%)</p>
+                      </div>
+                      <div className="setting-control">
+                        <input
+                          type="range"
+                          min="10"
+                          max="100"
+                          value={windowSettings.opacity * 100}
+                          onChange={(e) => handleOpacityChange(parseInt(e.target.value) / 100)}
+                          className="opacity-slider-large"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </section>
 
-              <div className="setting-item">
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={windowSettings.clickThrough}
-                    onChange={(e) => handleSettingChange('clickThrough', e.target.checked)}
-                  />
-                  Click Through
-                </label>
-              </div>
+                <section className="settings-section">
+                  <h2 className="section-title">Window Behavior</h2>
+                  <div className="settings-grid">
+                    <div className="setting-card">
+                      <div className="setting-header">
+                        <h3>Always on Top</h3>
+                        <p>Keep window above all other applications</p>
+                      </div>
+                      <div className="setting-control">
+                        <label className="toggle-switch">
+                          <input
+                            type="checkbox"
+                            checked={windowSettings.alwaysOnTop}
+                            onChange={(e) => handleSettingChange('alwaysOnTop', e.target.checked)}
+                          />
+                          <span className="toggle-slider"></span>
+                        </label>
+                      </div>
+                    </div>
 
-              <div className="setting-item">
-                <label>
-                  Opacity: {Math.round(windowSettings.opacity * 100)}%
-                  <input
-                    type="range"
-                    min="10"
-                    max="100"
-                    value={windowSettings.opacity * 100}
-                    onChange={(e) => handleOpacityChange(parseInt(e.target.value) / 100)}
-                    className="opacity-slider"
-                  />
-                </label>
+                    <div className="setting-card">
+                      <div className="setting-header">
+                        <h3>Click Through</h3>
+                        <p>Allow clicks to pass through the window</p>
+                      </div>
+                      <div className="setting-control">
+                        <label className="toggle-switch">
+                          <input
+                            type="checkbox"
+                            checked={windowSettings.clickThrough}
+                            onChange={(e) => handleSettingChange('clickThrough', e.target.checked)}
+                          />
+                          <span className="toggle-slider"></span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="settings-section">
+                  <h2 className="section-title">Editor</h2>
+                  <div className="settings-grid">
+                    <div className="setting-card">
+                      <div className="setting-header">
+                        <h3>Split Pane Position</h3>
+                        <p>Adjust the editor and preview pane sizes ({Math.round(splitPosition)}% / {Math.round(100 - splitPosition)}%)</p>
+                      </div>
+                      <div className="setting-control">
+                        <input
+                          type="range"
+                          min="20"
+                          max="80"
+                          value={splitPosition}
+                          onChange={(e) => {
+                            const newPosition = parseInt(e.target.value);
+                            setSplitPosition(newPosition);
+                            TauriAPI.setSplitPaneSize(newPosition / 100).catch(console.error);
+                          }}
+                          className="split-slider"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </section>
               </div>
             </div>
           </div>
         </div>
-      )}
+      ) : (
+        <div className="split-container">
+          <div
+            className="editor-pane"
+            style={{ width: `${splitPosition}%` }}
+          >
+            <TextEditor
+              content={editorContent}
+              onChange={setEditorContent}
+              onCursorChange={setCursorPosition}
+              errors={errors}
+              theme={theme}
+            />
+          </div>
 
-      <button
-        className="settings-button"
-        onClick={() => setShowSettings(!showSettings)}
-        title="Settings"
-      >
-        ⚙️
-      </button>
-
-      <div className="split-container">
-        <div
-          className="editor-pane"
-          style={{ width: `${splitPosition}%` }}
-        >
-          <textarea
-            className="editor-textarea"
-            placeholder="Enter your Mermaid diagram here..."
-            value={editorContent}
-            onChange={(e) => setEditorContent(e.target.value)}
+          <div
+            className={`split-divider ${isDragging ? 'dragging' : ''}`}
+            onMouseDown={handleMouseDown}
           />
-        </div>
 
-        <div
-          className={`split-divider ${isDragging ? 'dragging' : ''}`}
-          onMouseDown={handleMouseDown}
-        />
-
-        <div
-          className="diagram-pane"
-          style={{ width: `${100 - splitPosition}%` }}
-        >
+          <div
+            className="diagram-pane"
+            style={{ width: `${100 - splitPosition}%` }}
+          >
           <div className="diagram-content">
-            {editorContent ? (
-              <div className="diagram-placeholder">
-                Diagram will render here
+            {diagrams.length > 0 ? (
+              <div className="diagrams-container">
+                <div className="diagrams-header">
+                  <h3>Diagrams ({diagrams.length})</h3>
+                  {isValidating && <span className="validating">Validating...</span>}
+                  {errors.length > 0 && (
+                    <span className="error-count">
+                      {errors.length} error{errors.length !== 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
+                <div className="diagrams-list">
+                  {diagrams.map((diagram) => (
+                    <div 
+                      key={diagram.id} 
+                      className={`diagram-item ${diagram.hasError ? 'has-error' : 'valid'}`}
+                    >
+                      <div className="diagram-header">
+                        <span className="diagram-type">{diagram.type}</span>
+                        <span className="diagram-lines">
+                          Lines {diagram.startLine}-{diagram.endLine}
+                        </span>
+                        {diagram.hasError && (
+                          <span className="error-indicator">⚠️</span>
+                        )}
+                      </div>
+                      {diagram.hasError && diagram.errorMessage && (
+                        <div className="diagram-error">
+                          {diagram.errorMessage}
+                        </div>
+                      )}
+                      <div className="diagram-preview">
+                        {diagram.hasError ? (
+                          <div className="error-placeholder">
+                            Fix syntax errors to see diagram
+                          </div>
+                        ) : (
+                          <div className="render-placeholder">
+                            Diagram rendering will be implemented in task 4
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             ) : (
               <div className="empty-state">
-                Start typing Mermaid syntax to see your diagram
+                <h3>No diagrams found</h3>
+                <p>Start typing Mermaid syntax in code blocks:</p>
+                <pre className="example-code">
+{`\`\`\`mermaid
+graph TD
+    A[Start] --> B[Process]
+    B --> C[End]
+\`\`\``}
+                </pre>
               </div>
             )}
           </div>
         </div>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
