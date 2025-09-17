@@ -83,11 +83,37 @@
     border-top-color: #404040;
     color: #ccc;
   }
+
+  .monaco-editor .monaco-editor-background {
+    background-color: #1a1f24;
+  }
 }
 
 /* Monaco Editor container adjustments */
 .monaco-editor {
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace !important;
+  border: none !important;
+  outline: none !important;
+}
+
+.monaco-editor .monaco-editor-container {
+  border: none !important;
+  outline: none !important;
+}
+
+/* Force Monaco editor background colors */
+.monaco-editor .monaco-editor-background,
+.monaco-editor .view-overlays,
+.monaco-editor .margin-view-overlays,
+.monaco-editor .monaco-editor-background .margin-view-overlays {
+  background-color: var(--editor-bg, #ffffff) !important;
+}
+
+/* Override Monaco editor background with custom colors when available */
+.monaco-editor[data-custom-colors="true"] .monaco-editor-background,
+.monaco-editor[data-custom-colors="true"] .view-overlays,
+.monaco-editor[data-custom-colors="true"] .margin-view-overlays {
+  background-color: var(--editor-bg) !important;
 }
 
 .monaco-editor .margin {
@@ -95,7 +121,7 @@
 }
 
 .monaco-editor .monaco-editor-background {
-  background-color: transparent;
+  background-color: #f8f9fa;
 }
 
 /* Scrollbar styling */
@@ -154,4 +180,22 @@
   background-color: rgba(255, 255, 255, 0.98);
   border: 1px solid #e0e0e0;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}/* Loa
+ding indicator */
+.editor-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  background-color: var(--editor-bg, #ffffff);
+  color: var(--editor-text, #333333);
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 14px;
+}
+
+/* Dark theme loading */
+[data-theme="dark"] .editor-loading {
+  background-color: var(--editor-bg-dark, #1e1e1e);
+  color: var(--editor-text-dark, #d4d4d4);
 }

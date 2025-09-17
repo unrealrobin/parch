@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import type { WindowSettings, AppInfo, FileContent, FileDialogResult, SaveResult } from '../types/tauri';
+import type { WindowSettings, ApplicationState, AppInfo, FileContent, FileDialogResult, SaveResult } from '../types/tauri';
 
 /**
  * Tauri API wrapper for Parch application commands
@@ -66,6 +66,45 @@ export class TauriAPI {
    */
   static async setSplitPaneSize(size: number): Promise<void> {
     return invoke('set_split_pane_size', { size });
+  }
+
+  // Application state management
+  static async getApplicationState(): Promise<ApplicationState> {
+    return invoke('get_application_state');
+  }
+
+  static async updateTheme(theme: string): Promise<void> {
+    return invoke('update_theme', { theme });
+  }
+
+  static async updateSettingsPanelState(show: boolean): Promise<void> {
+    return invoke('update_settings_panel_state', { show });
+  }
+
+  static async updateActiveDiagramIndex(index: number): Promise<void> {
+    return invoke('update_active_diagram_index', { index });
+  }
+
+  static async updateCursorPosition(line: number, column: number): Promise<void> {
+    return invoke('update_cursor_position', { line, column });
+  }
+
+  static async updateFileState(
+    filePath?: string,
+    fileName?: string,
+    fileContent?: string,
+    hasUnsavedChanges: boolean = false
+  ): Promise<void> {
+    return invoke('update_file_state', { 
+      file_path: filePath,
+      file_name: fileName,
+      file_content: fileContent,
+      has_unsaved_changes: hasUnsavedChanges
+    });
+  }
+
+  static async updateTreeViewState(show: boolean): Promise<void> {
+    return invoke('update_tree_view_state', { show });
   }
 
   /**

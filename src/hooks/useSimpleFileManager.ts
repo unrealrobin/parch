@@ -35,6 +35,7 @@ export interface SimpleFileManagerActions {
   saveFile: () => Promise<void>;
   saveFileAs: () => Promise<void>;
   updateContent: (content: string) => void;
+  restoreFile: (file: FileContent) => void;
   clearError: () => void;
 }
 
@@ -356,6 +357,28 @@ export function useSimpleFileManager(): [SimpleFileManagerState, SimpleFileManag
     }
   }, [state.isSettingContent]);
 
+  const restoreFile = useCallback((file: FileContent) => {
+    console.log('🔄 RESTORE FILE CALLED:', file.name);
+    console.log('🔄 File content length:', file.content.length);
+    console.log('🔄 File is saved:', file.isSaved);
+    
+    setState(prevState => ({
+      ...prevState,
+      currentFile: file,
+      hasUnsavedChanges: !file.isSaved,
+      isSettingContent: true,
+      error: null
+    }));
+    
+    // Clear the flag after a short delay
+    setTimeout(() => {
+      setState(prevState => ({
+        ...prevState,
+        isSettingContent: false
+      }));
+    }, 100);
+  }, []);
+
   const clearError = useCallback(() => {
     updateState({ error: null });
   }, [updateState]);
@@ -368,6 +391,7 @@ export function useSimpleFileManager(): [SimpleFileManagerState, SimpleFileManag
       saveFile,
       saveFileAs,
       updateContent,
+      restoreFile,
       clearError,
     },
   ];

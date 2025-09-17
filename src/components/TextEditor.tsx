@@ -10,12 +10,61 @@ const TextEditor: React.FC<TextEditorProps> = ({
   errors = [],
   highlightRange,
   readOnly = false,
-  theme = 'light'
+  theme = 'light',
+  showTreeView = false,
+  customColors
 }) => {
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
   const [isEditorReady, setIsEditorReady] = useState(false);
   const decorationsRef = useRef<string[]>([]);
+
+  // Define custom themes function
+  const defineThemes = (monacoInstance: Monaco) => {
+    monacoInstance.editor.defineTheme('mermaid-light', {
+      base: 'vs',
+      inherit: true,
+      rules: [
+        { token: 'keyword', foreground: '0000ff', fontStyle: 'bold' },
+        { token: 'keyword.control', foreground: '800080', fontStyle: 'bold' },
+        { token: 'operator', foreground: 'ff0000' },
+        { token: 'string', foreground: '008000' },
+        { token: 'comment', foreground: '808080', fontStyle: 'italic' },
+        { token: 'number', foreground: '0000ff' },
+        { token: 'identifier', foreground: '000000' },
+        { token: 'delimiter.bracket', foreground: '000000' }
+      ],
+      colors: {
+        'editor.background': customColors?.editorBackground || '#f8f9fa',
+        'editorWidget.background': customColors?.editorBackground || '#f8f9fa',
+        'input.background': customColors?.editorBackground || '#f8f9fa',
+        'dropdown.background': customColors?.editorBackground || '#f8f9fa',
+        'quickInput.background': customColors?.editorBackground || '#f8f9fa'
+      }
+    });
+
+    monacoInstance.editor.defineTheme('mermaid-dark', {
+      base: 'vs-dark',
+      inherit: true,
+      rules: [
+        { token: 'keyword', foreground: '569cd6', fontStyle: 'bold' },
+        { token: 'keyword.control', foreground: 'c586c0', fontStyle: 'bold' },
+        { token: 'operator', foreground: 'd4d4d4' },
+        { token: 'string', foreground: 'ce9178' },
+        { token: 'comment', foreground: '6a9955', fontStyle: 'italic' },
+        { token: 'number', foreground: 'b5cea8' },
+        { token: 'identifier', foreground: 'd4d4d4' },
+        { token: 'delimiter.bracket', foreground: 'ffd700' }
+      ],
+      colors: {
+        'editor.background': customColors?.editorBackground || '#1a1f24',
+        'editorWidget.background': customColors?.editorBackground || '#1a1f24',
+        'input.background': customColors?.editorBackground || '#1a1f24',
+        'dropdown.background': customColors?.editorBackground || '#1a1f24',
+        'quickInput.background': customColors?.editorBackground || '#1a1f24'
+      }
+    });
+  };
 
   // Handle editor mount
   const handleEditorDidMount = (editor: monaco.editor.IStandaloneCodeEditor, monacoInstance: Monaco) => {
@@ -47,6 +96,18 @@ const TextEditor: React.FC<TextEditorProps> = ({
 
     setIsEditorReady(true);
   };
+
+  // Handle minimap changes dynamically
+  useEffect(() => {
+    if (editorRef.current && isEditorReady) {
+      console.log('🔄 Updating minimap setting to:', showTreeView);
+      editorRef.current.updateOptions({ 
+        minimap: { 
+          enabled: showTreeView 
+        }
+      });
+    }
+  }, [showTreeView, isEditorReady]);
 
   // Register Mermaid language with Monaco
   const registerMermaidLanguage = (monacoInstance: Monaco) => {
@@ -109,38 +170,8 @@ const TextEditor: React.FC<TextEditorProps> = ({
       }
     });
 
-    // Set the theme
-    monacoInstance.editor.defineTheme('mermaid-light', {
-      base: 'vs',
-      inherit: true,
-      rules: [
-        { token: 'keyword', foreground: '0000ff', fontStyle: 'bold' },
-        { token: 'keyword.control', foreground: '800080', fontStyle: 'bold' },
-        { token: 'operator', foreground: 'ff0000' },
-        { token: 'string', foreground: '008000' },
-        { token: 'comment', foreground: '808080', fontStyle: 'italic' },
-        { token: 'number', foreground: '0000ff' },
-        { token: 'identifier', foreground: '000000' },
-        { token: 'delimiter.bracket', foreground: '000000' }
-      ],
-      colors: {}
-    });
-
-    monacoInstance.editor.defineTheme('mermaid-dark', {
-      base: 'vs-dark',
-      inherit: true,
-      rules: [
-        { token: 'keyword', foreground: '569cd6', fontStyle: 'bold' },
-        { token: 'keyword.control', foreground: 'c586c0', fontStyle: 'bold' },
-        { token: 'operator', foreground: 'd4d4d4' },
-        { token: 'string', foreground: 'ce9178' },
-        { token: 'comment', foreground: '6a9955', fontStyle: 'italic' },
-        { token: 'number', foreground: 'b5cea8' },
-        { token: 'identifier', foreground: 'd4d4d4' },
-        { token: 'delimiter.bracket', foreground: 'ffd700' }
-      ],
-      colors: {}
-    });
+    // Define themes
+    defineThemes(monacoInstance);
   };
 
   // Update error decorations
@@ -214,9 +245,20 @@ const TextEditor: React.FC<TextEditorProps> = ({
   useEffect(() => {
     if (!isEditorReady || !monacoRef.current) return;
     
+    // Redefine themes with current colors
+    defineThemes(monacoRef.current);
+    
     const themeId = theme === 'dark' ? 'mermaid-dark' : 'mermaid-light';
     monacoRef.current.editor.setTheme(themeId);
-  }, [theme, isEditorReady]);
+    
+    // Force update background color using current theme colors
+    if (editorRef.current) {
+      const editorBackground = customColors?.editorBackground || (theme === 'dark' ? '#1a1f24' : '#f8f9fa');
+      editorRef.current.updateOptions({
+        backgroundColor: editorBackground
+      });
+    }
+  }, [theme, isEditorReady, customColors]);
 
   return (
     <div className="text-editor-container">
@@ -226,6 +268,7 @@ const TextEditor: React.FC<TextEditorProps> = ({
         value={content}
         theme={theme === 'dark' ? 'mermaid-dark' : 'mermaid-light'}
         onMount={handleEditorDidMount}
+        loading={<div className="editor-loading">Initializing editor...</div>}
         onChange={(value) => {
           if (value !== undefined) {
             onChange(value);
@@ -233,7 +276,6 @@ const TextEditor: React.FC<TextEditorProps> = ({
         }}
         options={{
           readOnly,
-          minimap: { enabled: true },
           scrollBeyondLastLine: false,
           fontSize: 14,
           fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace',
@@ -269,11 +311,19 @@ const TextEditor: React.FC<TextEditorProps> = ({
           cursorSmoothCaretAnimation: 'on',
           smoothScrolling: true,
           scrollbar: {
-            vertical: 'auto',
-            horizontal: 'auto',
+            vertical: 'hidden',
+            horizontal: 'hidden',
             useShadows: false,
             verticalHasArrows: false,
             horizontalHasArrows: false
+          },
+          // Remove line highlighting
+          renderLineHighlight: 'none',
+          hideCursorInOverviewRuler: true,
+          overviewRulerBorder: false,
+          // Minimap settings (the zoomed-out overview on the side)
+          minimap: { 
+            enabled: showTreeView 
           }
         }}
       />

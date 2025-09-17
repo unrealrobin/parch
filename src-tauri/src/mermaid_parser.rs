@@ -36,6 +36,7 @@ pub struct ParseResult {
 }
 
 pub struct MermaidParser {
+    #[allow(dead_code)]
     code_block_regex: Regex,
     diagram_type_patterns: HashMap<String, Regex>,
 }

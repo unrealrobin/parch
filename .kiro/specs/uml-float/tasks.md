@@ -28,22 +28,18 @@
   - _Requirements: 1.3, 1.4, 11.1, 11.2, 11.3, 11.4, 11.5_
 
 - [x] 5. Build file management system
-
-
-
-
-
-
-
-
-
   - Implement file creation, opening, and saving operations
   - Add file dialog integration using Tauri APIs
   - Create unsaved changes tracking and prompts
   - Support multiple Mermaid file formats (.md, .mmd, .mermaid)
   - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7_
 
-- [ ] 6. Implement window state persistence
+- [x] 6. Implement window state persistence
+
+
+
+
+
   - Save and restore window position and size
   - Persist split-pane layout preferences
   - Store window management settings (opacity, always-on-top)

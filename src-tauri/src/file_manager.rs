@@ -37,6 +37,7 @@ impl FileType {
         }
     }
 
+    #[allow(dead_code)]
     pub fn get_extension(&self) -> &'static str {
         match self {
             FileType::Markdown => "md",
@@ -45,6 +46,7 @@ impl FileType {
         }
     }
 
+    #[allow(dead_code)]
     pub fn get_filter_name(&self) -> &'static str {
         match self {
             FileType::Markdown => "Markdown Files",
@@ -105,6 +107,7 @@ fn load_file_from_path_internal(path: &Path) -> Result<FileContent, String> {
 }
 
 impl FileManager {
+    #[allow(dead_code)]
     pub fn new() -> Self {
         Self
     }
@@ -211,6 +214,7 @@ impl FileManager {
     }
 
     /// Load file from a specific path
+    #[allow(dead_code)]
     pub fn load_file_from_path(path: &Path) -> Result<FileContent, String> {
         load_file_from_path_internal(path)
     }
@@ -377,6 +381,7 @@ impl FileManager {
     }
 
     /// Validate file extension
+    #[allow(dead_code)]
     pub fn is_supported_file(path: &Path) -> bool {
         if let Some(extension) = path.extension().and_then(|ext| ext.to_str()) {
             Self::get_supported_extensions().contains(&extension.to_lowercase().as_str())

@@ -43,6 +43,34 @@ export interface TextEditorProps {
   highlightRange?: Range;
   readOnly?: boolean;
   theme?: 'light' | 'dark';
+  showTreeView?: boolean;
+  customColors?: ThemeColors;
+}
+
+export interface ThemeColors {
+  // Core Colors
+  primaryBackground: string;
+  secondaryBackground: string;
+  tertiaryBackground: string;
+  
+  // Text Colors
+  primaryText: string;
+  secondaryText: string;
+  accentText: string;
+  
+  // Interactive Colors
+  accentColor: string;
+  borderColor: string;
+  hoverColor: string;
+  
+  // Status Colors
+  successColor: string;
+  errorColor: string;
+  warningColor: string;
+  
+  // Editor Colors
+  editorBackground: string;
+  editorText: string;
 }
 
 export interface MermaidParserInterface {

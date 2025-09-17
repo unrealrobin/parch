@@ -27,6 +27,7 @@
         "decorations": false,
         "transparent": false,
         "shadow": false,
+        "backgroundColor": "#f8f9fa",
         "center": true,
         "focus": true,
         "fullscreen": false,

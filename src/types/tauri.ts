@@ -1,4 +1,5 @@
 // Tauri command types for Parch application
+import { ThemeColors } from './editor';
 
 export interface WindowSettings {
   alwaysOnTop: boolean;
@@ -7,6 +8,19 @@ export interface WindowSettings {
   position?: [number, number];
   size?: [number, number];
   splitPaneSize: number;
+}
+
+export interface ApplicationState {
+  theme: string; // "light" or "dark"
+  showSettings: boolean;
+  activeDiagramIndex: number;
+  cursorPosition?: [number, number]; // [line, column]
+  lastFilePath?: string;
+  lastFileContent?: string;
+  lastFileName?: string;
+  hasUnsavedChanges: boolean;
+  showTreeView: boolean;
+  customColors?: ThemeColors;
 }
 
 export interface AppInfo {

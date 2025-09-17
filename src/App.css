@@ -21,6 +21,7 @@ body {
   padding: 0;
   min-height: 100vh;
   overflow: hidden;
+  background: var(--primary-bg, #f8f9fa);
 }
 
 #root {
@@ -34,14 +35,16 @@ body {
   display: flex;
   flex-direction: column;
   position: relative;
-  background: #ffffff;
+  background: var(--primary-bg, #ffffff);
+  border: 1px solid var(--border-color, #e1e4e8);
+  overflow: hidden;
 }
 
 /* Custom Title Bar */
 .title-bar {
   height: 32px;
-  background: #f6f8fa;
-  border-bottom: 1px solid #e1e5e9;
+  background: var(--secondary-bg, #f6f8fa);
+  border-bottom: 1px solid var(--border-color, #e1e5e9);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -53,7 +56,7 @@ body {
 .title-bar-title {
   font-size: 13px;
   font-weight: 500;
-  color: #24292f;
+  color: var(--primary-text, #24292f);
   pointer-events: none;
   flex: 1;
 }
@@ -112,7 +115,6 @@ body {
 
 /* Title Bar Settings Button */
 .settings-button-titlebar {
-  width: 28px;
   height: 24px;
   border: none;
   background: transparent;
@@ -120,14 +122,18 @@ body {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 11px;
+  font-weight: 500;
   transition: all 0.15s ease;
   border-radius: 4px;
   pointer-events: auto;
+  padding: 0 6px;
+  color: var(--accent-color, #14b8a6);
+  white-space: nowrap;
 }
 
 .settings-button-titlebar:hover {
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--hover-color, rgba(0, 0, 0, 0.05));
 }
 
 /* Home Button */
@@ -167,12 +173,12 @@ body {
   border-radius: 4px;
   pointer-events: auto;
   padding: 0 6px;
-  color: #24292f;
+  color: var(--accent-color, #14b8a6);
   white-space: nowrap;
 }
 
 .file-button:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--hover-color, rgba(0, 0, 0, 0.05));
 }
 
 .file-button:disabled {
@@ -376,8 +382,8 @@ body {
 .editor-pane {
   display: flex;
   flex-direction: column;
-  border-right: 1px solid #e1e5e9;
-  background: #ffffff;
+  border-right: 1px solid var(--border-color, #e1e5e9);
+  background: var(--primary-bg, #ffffff);
 }
 
 .editor-textarea {
@@ -398,8 +404,8 @@ body {
 }
 
 .split-divider {
-  width: 8px;
-  background: #e1e5e9;
+  width: 4px;
+  background: #0f766e;
   cursor: col-resize;
   transition: all 0.2s ease;
   position: relative;
@@ -418,7 +424,8 @@ body {
 }
 
 .split-divider:hover {
-  background: #d1d9e0;
+  background: #0d4f46;
+  width: 8px;
 }
 
 .split-divider:hover::before {
@@ -443,7 +450,7 @@ body {
 .diagram-pane {
   display: flex;
   flex-direction: column;
-  background: #f6f8fa;
+  background: var(--secondary-bg, #f6f8fa);
 }
 
 .diagram-content {
@@ -478,8 +485,13 @@ body {
     background-color: #0d1117;
   }
 
+  body {
+    background: #0d1117;
+  }
+
   .app {
     background: #0d1117;
+    border: 1px solid #30363d;
   }
 
   .settings-button {
@@ -554,7 +566,7 @@ body {
   }
 
   .split-divider {
-    background: #30363d;
+    background: #0f766e;
   }
 
   .split-divider::before {
@@ -562,7 +574,8 @@ body {
   }
 
   .split-divider:hover {
-    background: #484f58;
+    background: #0d4f46;
+    width: 8px;
   }
 
   .split-divider:hover::before {
@@ -1112,7 +1125,7 @@ body {
   }
 
   .file-button {
-    color: #e6edf3;
+    color: #14b8a6;
   }
 
   .file-button:hover:not(:disabled) {
@@ -1235,7 +1248,36 @@ body {
   .toggle-switch:hover .toggle-slider {
     box-shadow: 0 0 0 3px rgba(47, 129, 247, 0.2);
   }
-}/* Er
+}
+
+/* Color customization styles */
+.color-category {
+  margin-bottom: 24px;
+}
+
+.color-category-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--primary-text, #24292f);
+  margin: 0 0 12px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-color, #e1e4e8);
+}
+
+.color-pickers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .color-category-title {
+    color: var(--primary-text, #e6edf3);
+    border-bottom-color: var(--border-color, #30363d);
+  }
+}
+
+/* Er
 ror Boundary Styles */
 .error-boundary {
   padding: 20px;

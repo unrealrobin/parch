@@ -3,22 +3,129 @@ import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 
 import { TauriAPI } from "./lib/tauri-api";
-import type { WindowSettings } from "./types/tauri";
+import type { WindowSettings, ApplicationState } from "./types/tauri";
 import TextEditor from "./components/TextEditor";
 import DiagramViewer from "./components/DiagramViewer";
 import { ErrorBoundary, FileManagerErrorFallback } from "./components/ErrorBoundary";
+import ColorPicker from "./components/ColorPicker";
 import { useTextEditor } from "./hooks/useTextEditor";
 import { useSimpleFileManager } from "./hooks/useSimpleFileManager";
-import type { ParsedDiagram } from "./types/editor";
+import type { ParsedDiagram, ThemeColors } from "./types/editor";
 import "./App.css";
 import "./components/TextEditor.css";
 import "./components/DiagramViewer.css";
+import "./components/ColorPicker.css";
+
+// Default theme color presets
+const defaultLightColors: ThemeColors = {
+  primaryBackground: '#ffffff',
+  secondaryBackground: '#f6f8fa',
+  tertiaryBackground: '#ffffff',
+  primaryText: '#24292f',
+  secondaryText: '#656d76',
+  accentText: '#0969da',
+  accentColor: '#14b8a6',
+  borderColor: '#e1e4e8',
+  hoverColor: 'rgba(0, 0, 0, 0.05)',
+  successColor: '#238636',
+  errorColor: '#d32f2f',
+  warningColor: '#ffaa00',
+  editorBackground: '#ffffff',
+  editorText: '#24292f'
+};
+
+const defaultDarkColors: ThemeColors = {
+  primaryBackground: '#0d1117',
+  secondaryBackground: '#161b22',
+  tertiaryBackground: '#21262d',
+  primaryText: '#e6edf3',
+  secondaryText: '#8b949e',
+  accentText: '#2f81f7',
+  accentColor: '#14b8a6',
+  borderColor: '#30363d',
+  hoverColor: 'rgba(255, 255, 255, 0.1)',
+  successColor: '#238636',
+  errorColor: '#f85149',
+  warningColor: '#ffaa00',
+  editorBackground: '#1a1f24',
+  editorText: '#d4d4d4'
+};
+
+// Preset color schemes
+const colorPresets = {
+  'GitHub Light': defaultLightColors,
+  'GitHub Dark': defaultDarkColors,
+  'Ocean Blue': {
+    primaryBackground: '#f0f8ff',
+    secondaryBackground: '#e6f3ff',
+    tertiaryBackground: '#ffffff',
+    primaryText: '#1a365d',
+    secondaryText: '#4a5568',
+    accentText: '#2b6cb0',
+    accentColor: '#3182ce',
+    borderColor: '#bee3f8',
+    hoverColor: 'rgba(49, 130, 206, 0.1)',
+    successColor: '#38a169',
+    errorColor: '#e53e3e',
+    warningColor: '#d69e2e',
+    editorBackground: '#ffffff',
+    editorText: '#1a365d'
+  },
+  'Forest Green': {
+    primaryBackground: '#f0fff4',
+    secondaryBackground: '#c6f6d5',
+    tertiaryBackground: '#ffffff',
+    primaryText: '#1a202c',
+    secondaryText: '#4a5568',
+    accentText: '#2f855a',
+    accentColor: '#38a169',
+    borderColor: '#9ae6b4',
+    hoverColor: 'rgba(56, 161, 105, 0.1)',
+    successColor: '#38a169',
+    errorColor: '#e53e3e',
+    warningColor: '#d69e2e',
+    editorBackground: '#ffffff',
+    editorText: '#1a202c'
+  },
+  'Sunset Orange': {
+    primaryBackground: '#fffaf0',
+    secondaryBackground: '#fed7aa',
+    tertiaryBackground: '#ffffff',
+    primaryText: '#2d3748',
+    secondaryText: '#4a5568',
+    accentText: '#dd6b20',
+    accentColor: '#ed8936',
+    borderColor: '#fbd38d',
+    hoverColor: 'rgba(237, 137, 54, 0.1)',
+    successColor: '#38a169',
+    errorColor: '#e53e3e',
+    warningColor: '#d69e2e',
+    editorBackground: '#ffffff',
+    editorText: '#2d3748'
+  },
+  'Midnight Purple': {
+    primaryBackground: '#1a1a2e',
+    secondaryBackground: '#16213e',
+    tertiaryBackground: '#0f3460',
+    primaryText: '#e94560',
+    secondaryText: '#a8a8a8',
+    accentText: '#e94560',
+    accentColor: '#e94560',
+    borderColor: '#533483',
+    hoverColor: 'rgba(233, 69, 96, 0.1)',
+    successColor: '#38a169',
+    errorColor: '#e53e3e',
+    warningColor: '#d69e2e',
+    editorBackground: '#0f1419',
+    editorText: '#e94560'
+  }
+};
 
 function App() {
   const [windowSettings, setWindowSettings] = useState<WindowSettings>({
     alwaysOnTop: false,
     clickThrough: false,
-    opacity: 1.0,
+    opacity: 1.0, // Keep for compatibility but won't be used in UI
     splitPaneSize: 0.5
   });
   const [showSettings, setShowSettings] = useState(false);
@@ -27,6 +134,40 @@ function App() {
   const [isMaximized, setIsMaximized] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [activeDiagramIndex, setActiveDiagramIndex] = useState(-1);
+  const [showTreeView, setShowTreeView] = useState(false);
+  const [appState, setAppState] = useState<ApplicationState | null>(null);
+  const [customColors, setCustomColors] = useState<ThemeColors | null>(null);
+
+  // Get current theme colors (custom or default)
+  const getCurrentColors = (): ThemeColors => {
+    if (customColors) return customColors;
+    return theme === 'dark' ? defaultDarkColors : defaultLightColors;
+  };
+
+  // Apply theme colors to CSS custom properties
+  const applyThemeColors = (colors: ThemeColors) => {
+    const root = document.documentElement;
+    root.style.setProperty('--primary-bg', colors.primaryBackground);
+    root.style.setProperty('--secondary-bg', colors.secondaryBackground);
+    root.style.setProperty('--tertiary-bg', colors.tertiaryBackground);
+    root.style.setProperty('--primary-text', colors.primaryText);
+    root.style.setProperty('--secondary-text', colors.secondaryText);
+    root.style.setProperty('--accent-text', colors.accentText);
+    root.style.setProperty('--accent-color', colors.accentColor);
+    root.style.setProperty('--border-color', colors.borderColor);
+    root.style.setProperty('--hover-color', colors.hoverColor);
+    root.style.setProperty('--success-color', colors.successColor);
+    root.style.setProperty('--error-color', colors.errorColor);
+    root.style.setProperty('--warning-color', colors.warningColor);
+    root.style.setProperty('--editor-bg', colors.editorBackground);
+    root.style.setProperty('--editor-text', colors.editorText);
+  };
+
+  // Apply theme colors when theme or custom colors change
+  useEffect(() => {
+    const currentColors = getCurrentColors();
+    applyThemeColors(currentColors);
+  }, [theme, customColors]);
 
   // File management state
   const [fileManagerState, fileManagerActions] = useSimpleFileManager();
@@ -38,10 +179,64 @@ function App() {
     }
   }, [fileManagerState.error]);
 
+  // Create a default file on startup if no file exists and no file was restored
+  useEffect(() => {
+    if (!fileManagerState.currentFile && !fileManagerState.isLoading && appState !== null) {
+      // Only create default file if no file state was restored from persistence
+      if (!appState.lastFileContent) {
+        console.log('🚀 Creating default file on startup');
+        fileManagerActions.createNewFile();
+      }
+    }
+  }, [fileManagerState.currentFile, fileManagerState.isLoading, appState, fileManagerActions]);
+
   // Save theme preference when it changes
   useEffect(() => {
-    localStorage.setItem('parch-theme', theme);
-  }, [theme]);
+    if (theme && appState !== null) { // Only save after initial load
+      console.log('🔄 Saving theme:', theme);
+      TauriAPI.updateTheme(theme).catch((error) => {
+        console.error('❌ Failed to save theme:', error);
+      });
+    }
+  }, [theme, appState]);
+
+  // Save settings panel state when it changes
+  useEffect(() => {
+    if (appState !== null) { // Only save after initial load
+      console.log('🔄 Saving settings panel state:', showSettings);
+      TauriAPI.updateSettingsPanelState(showSettings).catch((error) => {
+        console.error('❌ Failed to save settings panel state:', error);
+      });
+      
+      // When closing settings, restore the split position from windowSettings
+      if (!showSettings && windowSettings.splitPaneSize !== undefined) {
+        const restoredPosition = windowSettings.splitPaneSize * 100;
+        console.log('🔄 Restoring split position from settings:', restoredPosition);
+        setSplitPosition(restoredPosition);
+      }
+    }
+  }, [showSettings, appState, windowSettings.splitPaneSize]);
+
+  // Save active diagram index when it changes
+  useEffect(() => {
+    if (appState !== null) { // Only save after initial load
+      TauriAPI.updateActiveDiagramIndex(activeDiagramIndex).catch((error) => {
+        console.error('❌ Failed to save active diagram index:', error);
+      });
+    }
+  }, [activeDiagramIndex, appState]);
+
+  // Save tree view state when it changes
+  useEffect(() => {
+    if (appState !== null) { // Only save after initial load
+      console.log('🔄 Saving tree view state:', showTreeView);
+      TauriAPI.updateTreeViewState(showTreeView).catch((error) => {
+        console.error('❌ Failed to save tree view state:', error);
+      });
+    }
+  }, [showTreeView, appState]);
+
+  // File state persistence removed - no longer saving file content
 
   // Handle file opening - simplified
   const handleOpenFile = useCallback(async () => {
@@ -93,86 +288,85 @@ function App() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    TauriAPI.getWindowSettings().then(settings => {
-      setWindowSettings(settings);
-      setSplitPosition(settings.splitPaneSize * 100);
-      // Apply initial opacity
-      document.body.style.opacity = settings.opacity.toString();
+    // Load window settings and application state
+    Promise.all([
+      TauriAPI.getWindowSettings(),
+      TauriAPI.getApplicationState()
+    ]).then(([windowSettings, applicationState]) => {
+      console.log('🔄 Loading application state:', applicationState);
+      console.log('🔄 Loading window settings:', windowSettings);
+      console.log('🔄 Always on top from settings:', windowSettings.alwaysOnTop);
+      console.log('🔄 Click through from settings:', windowSettings.clickThrough);
+      
+      // Set window settings
+      setWindowSettings(windowSettings);
+      console.log('🔄 Setting split position from loaded settings:', windowSettings.splitPaneSize * 100);
+      setSplitPosition(windowSettings.splitPaneSize * 100);
+      // Opacity is no longer used in the UI
+      
+      // Set application state
+      setAppState(applicationState);
+      setTheme(applicationState.theme as 'light' | 'dark');
+      setShowSettings(applicationState.showSettings);
+      setActiveDiagramIndex(applicationState.activeDiagramIndex);
+      setShowTreeView(applicationState.showTreeView);
+      
+      // File content persistence removed - always start with new/open file options
+      console.log('🔄 File content persistence disabled - starting fresh');
     }).catch(console.error);
 
-    // Load saved theme or detect system preference
-    const savedTheme = localStorage.getItem('parch-theme') as 'light' | 'dark' | null;
-    if (savedTheme) {
-      setTheme(savedTheme);
-    } else {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      setTheme(mediaQuery.matches ? 'dark' : 'light');
-    }
+    // Opacity listener removed - no longer using opacity in UI
 
-    // Listen for opacity changes from the backend
-    const unlistenOpacity = listen<number>('opacity-changed', (event) => {
-      document.body.style.opacity = event.payload.toString();
-    });
-
-    // Listen for window resize events to track maximize state
+    // Get the window instance for event listeners
     const appWindow = getCurrentWindow();
+
+    // Listen for window resize events to track maximize state and save state
     const unlistenResize = appWindow.onResized(() => {
       TauriAPI.isWindowMaximized().then(setIsMaximized).catch(console.error);
+      // Save window state when resized (debounced)
+      TauriAPI.saveWindowState().catch(console.error);
+    });
+
+    // Listen for window move events to save position
+    const unlistenMoved = appWindow.onMoved(() => {
+      // Save window state when moved (debounced)
+      TauriAPI.saveWindowState().catch(console.error);
     });
 
     // Check initial maximize state
     TauriAPI.isWindowMaximized().then(setIsMaximized).catch(console.error);
 
     return () => {
-      unlistenOpacity.then(fn => fn());
       unlistenResize.then(fn => fn());
+      unlistenMoved.then(fn => fn());
     };
   }, []);
 
-  // Save window state when settings change
-  useEffect(() => {
-    const saveState = async () => {
-      try {
-        await TauriAPI.saveWindowState();
-      } catch (error) {
-        console.error('Failed to save window state:', error);
-      }
-    };
-
-    const timeoutId = setTimeout(saveState, 500);
-    return () => clearTimeout(timeoutId);
-  }, [windowSettings]);
+  // Window state is now saved immediately when changes occur
 
   const handleSettingChange = async (key: keyof WindowSettings, value: boolean) => {
+    console.log('🔄 Setting change:', key, '=', value);
     const newSettings = { ...windowSettings, [key]: value };
     setWindowSettings(newSettings);
 
     try {
       switch (key) {
         case 'alwaysOnTop':
+          console.log('🔄 Saving always on top:', value);
           await TauriAPI.setAlwaysOnTop(value);
+          console.log('✅ Always on top saved successfully');
           break;
         case 'clickThrough':
+          console.log('🔄 Saving click through:', value);
           await TauriAPI.setClickThrough(value);
+          console.log('✅ Click through saved successfully');
           break;
       }
     } catch (error) {
-      console.error(`Failed to update ${key}:`, error);
+      console.error(`❌ Failed to update ${key}:`, error);
     }
   };
 
-  const handleOpacityChange = async (opacity: number) => {
-    const newSettings = { ...windowSettings, opacity };
-    setWindowSettings(newSettings);
-
-    try {
-      await TauriAPI.setOpacity(opacity);
-      // Apply opacity to the document body for visual feedback
-      document.body.style.opacity = opacity.toString();
-    } catch (error) {
-      console.error('Failed to update opacity:', error);
-    }
-  };
 
   // Window control functions
   const handleMinimize = async (e: React.MouseEvent) => {
@@ -260,7 +454,19 @@ function App() {
     const clampedPosition = Math.max(15, Math.min(85, newPosition));
 
     setSplitPosition(clampedPosition);
-    TauriAPI.setSplitPaneSize(clampedPosition / 100).catch(console.error);
+    
+    // Update window settings state
+    setWindowSettings(prev => ({ ...prev, splitPaneSize: clampedPosition / 100 }));
+    
+    // Save to persistent storage
+    console.log('🔄 Saving split pane position:', clampedPosition / 100);
+    TauriAPI.setSplitPaneSize(clampedPosition / 100)
+      .then(() => {
+        console.log('✅ Split pane position saved successfully');
+      })
+      .catch((error) => {
+        console.error('❌ Failed to save split pane position:', error);
+      });
   };
 
   const handleMouseUp = () => {
@@ -426,7 +632,7 @@ function App() {
                 type="button"
                 disabled={fileManagerState.isLoading}
               >
-                {fileManagerState.isLoading ? '⏳' : '📄'} New
+New
               </button>
               <button
                 className="file-button"
@@ -435,7 +641,7 @@ function App() {
                 type="button"
                 disabled={fileManagerState.isLoading}
               >
-                {fileManagerState.isLoading ? '⏳' : '📁'} Open
+Open
               </button>
               <button
                 className="file-button"
@@ -444,7 +650,7 @@ function App() {
                 type="button"
                 disabled={fileManagerState.isLoading || !fileManagerState.currentFile}
               >
-                {fileManagerState.isLoading ? '⏳' : '💾'} Save
+                Save
               </button>
               <button
                 className="file-button"
@@ -453,15 +659,7 @@ function App() {
                 type="button"
                 disabled={fileManagerState.isLoading || !fileManagerState.currentFile}
               >
-                {fileManagerState.isLoading ? '⏳' : '💾'} Save As
-              </button>
-              <button
-                className="theme-toggle-button"
-                onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-                title={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
-                type="button"
-              >
-                {theme === 'light' ? '🌙' : '☀️'}
+                Save As
               </button>
               <button
                 className="settings-button-titlebar"
@@ -469,7 +667,7 @@ function App() {
                 title="Settings"
                 type="button"
               >
-                ⚙️
+                Settings
               </button>
             </>
           )}
@@ -537,18 +735,195 @@ function App() {
 
                     <div className="setting-card">
                       <div className="setting-header">
-                        <h3>Window Opacity</h3>
-                        <p>Adjust window transparency ({Math.round(windowSettings.opacity * 100)}%)</p>
+                        <h3>Color Presets</h3>
+                        <p>Choose from predefined color schemes</p>
                       </div>
                       <div className="setting-control">
-                        <input
-                          type="range"
-                          min="10"
-                          max="100"
-                          value={windowSettings.opacity * 100}
-                          onChange={(e) => handleOpacityChange(parseInt(e.target.value) / 100)}
-                          className="opacity-slider-large"
-                        />
+                        <select
+                          value={customColors ? 'Custom' : (theme === 'dark' ? 'GitHub Dark' : 'GitHub Light')}
+                          onChange={(e) => {
+                            const presetName = e.target.value;
+                            if (presetName === 'Custom') {
+                              setCustomColors(getCurrentColors());
+                            } else {
+                              setCustomColors(null);
+                              const preset = colorPresets[presetName as keyof typeof colorPresets];
+                              if (preset) {
+                                setCustomColors(preset);
+                              }
+                            }
+                          }}
+                          className="theme-selector-large"
+                        >
+                          <option value="GitHub Light">GitHub Light</option>
+                          <option value="GitHub Dark">GitHub Dark</option>
+                          <option value="Ocean Blue">Ocean Blue</option>
+                          <option value="Forest Green">Forest Green</option>
+                          <option value="Sunset Orange">Sunset Orange</option>
+                          <option value="Midnight Purple">Midnight Purple</option>
+                          <option value="Custom">Custom Colors</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="setting-card">
+                      <div className="setting-header">
+                        <h3>Custom Colors</h3>
+                        <p>Enable individual color customization</p>
+                      </div>
+                      <div className="setting-control">
+                        <label className="toggle-switch">
+                          <input
+                            type="checkbox"
+                            checked={customColors !== null}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setCustomColors(getCurrentColors());
+                              } else {
+                                setCustomColors(null);
+                              }
+                            }}
+                          />
+                          <span className="toggle-slider"></span>
+                        </label>
+                      </div>
+                    </div>
+
+                  </div>
+                </section>
+
+                {customColors && (
+                  <section className="settings-section">
+                    <h2 className="section-title">Color Customization</h2>
+                    <div className="settings-grid">
+                      <div className="color-category">
+                        <h3 className="color-category-title">Core Colors</h3>
+                        <div className="color-pickers-grid">
+                          <ColorPicker
+                            label="Primary Background"
+                            value={customColors.primaryBackground}
+                            onChange={(color) => setCustomColors({...customColors, primaryBackground: color})}
+                            description="Main app background"
+                          />
+                          <ColorPicker
+                            label="Secondary Background"
+                            value={customColors.secondaryBackground}
+                            onChange={(color) => setCustomColors({...customColors, secondaryBackground: color})}
+                            description="Panels and cards"
+                          />
+                          <ColorPicker
+                            label="Tertiary Background"
+                            value={customColors.tertiaryBackground}
+                            onChange={(color) => setCustomColors({...customColors, tertiaryBackground: color})}
+                            description="Inputs and dropdowns"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="color-category">
+                        <h3 className="color-category-title">Text Colors</h3>
+                        <div className="color-pickers-grid">
+                          <ColorPicker
+                            label="Primary Text"
+                            value={customColors.primaryText}
+                            onChange={(color) => setCustomColors({...customColors, primaryText: color})}
+                            description="Main text color"
+                          />
+                          <ColorPicker
+                            label="Secondary Text"
+                            value={customColors.secondaryText}
+                            onChange={(color) => setCustomColors({...customColors, secondaryText: color})}
+                            description="Muted text color"
+                          />
+                          <ColorPicker
+                            label="Accent Text"
+                            value={customColors.accentText}
+                            onChange={(color) => setCustomColors({...customColors, accentText: color})}
+                            description="Links and highlights"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="color-category">
+                        <h3 className="color-category-title">Interactive Colors</h3>
+                        <div className="color-pickers-grid">
+                          <ColorPicker
+                            label="Accent Color"
+                            value={customColors.accentColor}
+                            onChange={(color) => setCustomColors({...customColors, accentColor: color})}
+                            description="Buttons, sliders, highlights"
+                          />
+                          <ColorPicker
+                            label="Border Color"
+                            value={customColors.borderColor}
+                            onChange={(color) => setCustomColors({...customColors, borderColor: color})}
+                            description="Dividers and borders"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="color-category">
+                        <h3 className="color-category-title">Status Colors</h3>
+                        <div className="color-pickers-grid">
+                          <ColorPicker
+                            label="Success Color"
+                            value={customColors.successColor}
+                            onChange={(color) => setCustomColors({...customColors, successColor: color})}
+                            description="Valid states"
+                          />
+                          <ColorPicker
+                            label="Error Color"
+                            value={customColors.errorColor}
+                            onChange={(color) => setCustomColors({...customColors, errorColor: color})}
+                            description="Errors and warnings"
+                          />
+                          <ColorPicker
+                            label="Warning Color"
+                            value={customColors.warningColor}
+                            onChange={(color) => setCustomColors({...customColors, warningColor: color})}
+                            description="Warning states"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="color-category">
+                        <h3 className="color-category-title">Editor Colors</h3>
+                        <div className="color-pickers-grid">
+                          <ColorPicker
+                            label="Editor Background"
+                            value={customColors.editorBackground}
+                            onChange={(color) => setCustomColors({...customColors, editorBackground: color})}
+                            description="Text editor background"
+                          />
+                          <ColorPicker
+                            label="Editor Text"
+                            value={customColors.editorText}
+                            onChange={(color) => setCustomColors({...customColors, editorText: color})}
+                            description="Text editor text color"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                )}
+
+                <section className="settings-section">
+                  <h2 className="section-title">Editor</h2>
+                  <div className="settings-grid">
+                    <div className="setting-card">
+                      <div className="setting-header">
+                        <h3>Minimap</h3>
+                        <p>Show zoomed-out overview on the side of the text editor</p>
+                      </div>
+                      <div className="setting-control">
+                        <label className="toggle-switch">
+                          <input
+                            type="checkbox"
+                            checked={showTreeView || false}
+                            onChange={(e) => setShowTreeView(e.target.checked)}
+                          />
+                          <span className="toggle-slider"></span>
+                        </label>
                       </div>
                     </div>
                   </div>
@@ -566,7 +941,7 @@ function App() {
                         <label className="toggle-switch">
                           <input
                             type="checkbox"
-                            checked={windowSettings.alwaysOnTop}
+                            checked={windowSettings.alwaysOnTop || false}
                             onChange={(e) => handleSettingChange('alwaysOnTop', e.target.checked)}
                           />
                           <span className="toggle-slider"></span>
@@ -583,7 +958,7 @@ function App() {
                         <label className="toggle-switch">
                           <input
                             type="checkbox"
-                            checked={windowSettings.clickThrough}
+                            checked={windowSettings.clickThrough || false}
                             onChange={(e) => handleSettingChange('clickThrough', e.target.checked)}
                           />
                           <span className="toggle-slider"></span>
@@ -593,31 +968,6 @@ function App() {
                   </div>
                 </section>
 
-                <section className="settings-section">
-                  <h2 className="section-title">Editor</h2>
-                  <div className="settings-grid">
-                    <div className="setting-card">
-                      <div className="setting-header">
-                        <h3>Split Pane Position</h3>
-                        <p>Adjust the editor and preview pane sizes ({Math.round(splitPosition)}% / {Math.round(100 - splitPosition)}%)</p>
-                      </div>
-                      <div className="setting-control">
-                        <input
-                          type="range"
-                          min="20"
-                          max="80"
-                          value={splitPosition}
-                          onChange={(e) => {
-                            const newPosition = parseInt(e.target.value);
-                            setSplitPosition(newPosition);
-                            TauriAPI.setSplitPaneSize(newPosition / 100).catch(console.error);
-                          }}
-                          className="split-slider"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </section>
               </div>
             </div>
           </div>
@@ -642,22 +992,26 @@ function App() {
               </div>
             )}
 
-            <TextEditor
-              content={editorContent}
-              onChange={handleEditorContentChange}
-              onCursorChange={(position) => {
-                setCursorPosition(position);
-                // Update active diagram based on cursor position
-                if (diagrams.length > 0) {
-                  const diagramIndex = diagrams.findIndex(diagram => 
-                    position.line >= diagram.startLine && position.line <= diagram.endLine
-                  );
-                  setActiveDiagramIndex(diagramIndex);
-                }
-              }}
-              errors={_errors}
-              theme={theme}
-            />
+        <TextEditor
+          content={editorContent}
+          onChange={handleEditorContentChange}
+          onCursorChange={(position) => {
+            setCursorPosition(position);
+            // Save cursor position to persistent state
+            TauriAPI.updateCursorPosition(position.line, position.column).catch(console.error);
+            // Update active diagram based on cursor position
+            if (diagrams.length > 0) {
+              const diagramIndex = diagrams.findIndex(diagram => 
+                position.line >= diagram.startLine && position.line <= diagram.endLine
+              );
+              setActiveDiagramIndex(diagramIndex);
+            }
+          }}
+          errors={_errors}
+          theme={theme}
+          showTreeView={showTreeView}
+          customColors={customColors}
+        />
           </div>
 
           <div
