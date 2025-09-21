@@ -1,4 +1,5 @@
 // Editor component types for Parch application
+import type { ThemeId } from '../lib/themes';
 
 export interface Position {
   line: number;
@@ -42,9 +43,8 @@ export interface TextEditorProps {
   errors?: SyntaxError[];
   highlightRange?: Range;
   readOnly?: boolean;
-  theme?: 'light' | 'dark';
+  theme?: ThemeId;
   showTreeView?: boolean;
-  customColors?: ThemeColors;
 }
 
 export interface ThemeColors {

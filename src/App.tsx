@@ -7,119 +7,15 @@ import type { WindowSettings, ApplicationState } from "./types/tauri";
 import TextEditor from "./components/TextEditor";
 import DiagramViewer from "./components/DiagramViewer";
 import { ErrorBoundary, FileManagerErrorFallback } from "./components/ErrorBoundary";
-import ColorPicker from "./components/ColorPicker";
 import { useTextEditor } from "./hooks/useTextEditor";
 import { useSimpleFileManager } from "./hooks/useSimpleFileManager";
-import type { ParsedDiagram, ThemeColors } from "./types/editor";
+import type { ParsedDiagram } from "./types/editor";
+import { themes, defaultTheme, applyTheme, type ThemeId } from "./lib/themes";
 import "./App.css";
 import "./components/TextEditor.css";
 import "./components/DiagramViewer.css";
-import "./components/ColorPicker.css";
 
-// Default theme color presets
-const defaultLightColors: ThemeColors = {
-  primaryBackground: '#ffffff',
-  secondaryBackground: '#f6f8fa',
-  tertiaryBackground: '#ffffff',
-  primaryText: '#24292f',
-  secondaryText: '#656d76',
-  accentText: '#0969da',
-  accentColor: '#14b8a6',
-  borderColor: '#e1e4e8',
-  hoverColor: 'rgba(0, 0, 0, 0.05)',
-  successColor: '#238636',
-  errorColor: '#d32f2f',
-  warningColor: '#ffaa00',
-  editorBackground: '#ffffff',
-  editorText: '#24292f'
-};
-
-const defaultDarkColors: ThemeColors = {
-  primaryBackground: '#0d1117',
-  secondaryBackground: '#161b22',
-  tertiaryBackground: '#21262d',
-  primaryText: '#e6edf3',
-  secondaryText: '#8b949e',
-  accentText: '#2f81f7',
-  accentColor: '#14b8a6',
-  borderColor: '#30363d',
-  hoverColor: 'rgba(255, 255, 255, 0.1)',
-  successColor: '#238636',
-  errorColor: '#f85149',
-  warningColor: '#ffaa00',
-  editorBackground: '#1a1f24',
-  editorText: '#d4d4d4'
-};
-
-// Preset color schemes
-const colorPresets = {
-  'GitHub Light': defaultLightColors,
-  'GitHub Dark': defaultDarkColors,
-  'Ocean Blue': {
-    primaryBackground: '#f0f8ff',
-    secondaryBackground: '#e6f3ff',
-    tertiaryBackground: '#ffffff',
-    primaryText: '#1a365d',
-    secondaryText: '#4a5568',
-    accentText: '#2b6cb0',
-    accentColor: '#3182ce',
-    borderColor: '#bee3f8',
-    hoverColor: 'rgba(49, 130, 206, 0.1)',
-    successColor: '#38a169',
-    errorColor: '#e53e3e',
-    warningColor: '#d69e2e',
-    editorBackground: '#ffffff',
-    editorText: '#1a365d'
-  },
-  'Forest Green': {
-    primaryBackground: '#f0fff4',
-    secondaryBackground: '#c6f6d5',
-    tertiaryBackground: '#ffffff',
-    primaryText: '#1a202c',
-    secondaryText: '#4a5568',
-    accentText: '#2f855a',
-    accentColor: '#38a169',
-    borderColor: '#9ae6b4',
-    hoverColor: 'rgba(56, 161, 105, 0.1)',
-    successColor: '#38a169',
-    errorColor: '#e53e3e',
-    warningColor: '#d69e2e',
-    editorBackground: '#ffffff',
-    editorText: '#1a202c'
-  },
-  'Sunset Orange': {
-    primaryBackground: '#fffaf0',
-    secondaryBackground: '#fed7aa',
-    tertiaryBackground: '#ffffff',
-    primaryText: '#2d3748',
-    secondaryText: '#4a5568',
-    accentText: '#dd6b20',
-    accentColor: '#ed8936',
-    borderColor: '#fbd38d',
-    hoverColor: 'rgba(237, 137, 54, 0.1)',
-    successColor: '#38a169',
-    errorColor: '#e53e3e',
-    warningColor: '#d69e2e',
-    editorBackground: '#ffffff',
-    editorText: '#2d3748'
-  },
-  'Midnight Purple': {
-    primaryBackground: '#1a1a2e',
-    secondaryBackground: '#16213e',
-    tertiaryBackground: '#0f3460',
-    primaryText: '#e94560',
-    secondaryText: '#a8a8a8',
-    accentText: '#e94560',
-    accentColor: '#e94560',
-    borderColor: '#533483',
-    hoverColor: 'rgba(233, 69, 96, 0.1)',
-    successColor: '#38a169',
-    errorColor: '#e53e3e',
-    warningColor: '#d69e2e',
-    editorBackground: '#0f1419',
-    editorText: '#e94560'
-  }
-};
+// Theme system - 4 predefined themes
 
 function App() {
   const [windowSettings, setWindowSettings] = useState<WindowSettings>({
@@ -132,42 +28,14 @@ function App() {
   const [splitPosition, setSplitPosition] = useState(50);
   const [isDragging, setIsDragging] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [theme, setTheme] = useState<ThemeId>(defaultTheme);
   const [activeDiagramIndex, setActiveDiagramIndex] = useState(-1);
   const [showTreeView, setShowTreeView] = useState(false);
   const [appState, setAppState] = useState<ApplicationState | null>(null);
-  const [customColors, setCustomColors] = useState<ThemeColors | null>(null);
-
-  // Get current theme colors (custom or default)
-  const getCurrentColors = (): ThemeColors => {
-    if (customColors) return customColors;
-    return theme === 'dark' ? defaultDarkColors : defaultLightColors;
-  };
-
-  // Apply theme colors to CSS custom properties
-  const applyThemeColors = (colors: ThemeColors) => {
-    const root = document.documentElement;
-    root.style.setProperty('--primary-bg', colors.primaryBackground);
-    root.style.setProperty('--secondary-bg', colors.secondaryBackground);
-    root.style.setProperty('--tertiary-bg', colors.tertiaryBackground);
-    root.style.setProperty('--primary-text', colors.primaryText);
-    root.style.setProperty('--secondary-text', colors.secondaryText);
-    root.style.setProperty('--accent-text', colors.accentText);
-    root.style.setProperty('--accent-color', colors.accentColor);
-    root.style.setProperty('--border-color', colors.borderColor);
-    root.style.setProperty('--hover-color', colors.hoverColor);
-    root.style.setProperty('--success-color', colors.successColor);
-    root.style.setProperty('--error-color', colors.errorColor);
-    root.style.setProperty('--warning-color', colors.warningColor);
-    root.style.setProperty('--editor-bg', colors.editorBackground);
-    root.style.setProperty('--editor-text', colors.editorText);
-  };
-
-  // Apply theme colors when theme or custom colors change
+  // Apply theme when theme changes
   useEffect(() => {
-    const currentColors = getCurrentColors();
-    applyThemeColors(currentColors);
-  }, [theme, customColors]);
+    applyTheme(theme);
+  }, [theme]);
 
   // File management state
   const [fileManagerState, fileManagerActions] = useSimpleFileManager();
@@ -724,188 +592,21 @@ Open
                       <div className="setting-control">
                         <select
                           value={theme}
-                          onChange={(e) => setTheme(e.target.value as 'light' | 'dark')}
+                          onChange={(e) => setTheme(e.target.value as ThemeId)}
                           className="theme-selector-large"
                         >
-                          <option value="light">Light</option>
-                          <option value="dark">Dark</option>
+                          {Object.values(themes).map((themeOption) => (
+                            <option key={themeOption.id} value={themeOption.id}>
+                              {themeOption.name}
+                            </option>
+                          ))}
                         </select>
-                      </div>
-                    </div>
-
-                    <div className="setting-card">
-                      <div className="setting-header">
-                        <h3>Color Presets</h3>
-                        <p>Choose from predefined color schemes</p>
-                      </div>
-                      <div className="setting-control">
-                        <select
-                          value={customColors ? 'Custom' : (theme === 'dark' ? 'GitHub Dark' : 'GitHub Light')}
-                          onChange={(e) => {
-                            const presetName = e.target.value;
-                            if (presetName === 'Custom') {
-                              setCustomColors(getCurrentColors());
-                            } else {
-                              setCustomColors(null);
-                              const preset = colorPresets[presetName as keyof typeof colorPresets];
-                              if (preset) {
-                                setCustomColors(preset);
-                              }
-                            }
-                          }}
-                          className="theme-selector-large"
-                        >
-                          <option value="GitHub Light">GitHub Light</option>
-                          <option value="GitHub Dark">GitHub Dark</option>
-                          <option value="Ocean Blue">Ocean Blue</option>
-                          <option value="Forest Green">Forest Green</option>
-                          <option value="Sunset Orange">Sunset Orange</option>
-                          <option value="Midnight Purple">Midnight Purple</option>
-                          <option value="Custom">Custom Colors</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="setting-card">
-                      <div className="setting-header">
-                        <h3>Custom Colors</h3>
-                        <p>Enable individual color customization</p>
-                      </div>
-                      <div className="setting-control">
-                        <label className="toggle-switch">
-                          <input
-                            type="checkbox"
-                            checked={customColors !== null}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setCustomColors(getCurrentColors());
-                              } else {
-                                setCustomColors(null);
-                              }
-                            }}
-                          />
-                          <span className="toggle-slider"></span>
-                        </label>
                       </div>
                     </div>
 
                   </div>
                 </section>
 
-                {customColors && (
-                  <section className="settings-section">
-                    <h2 className="section-title">Color Customization</h2>
-                    <div className="settings-grid">
-                      <div className="color-category">
-                        <h3 className="color-category-title">Core Colors</h3>
-                        <div className="color-pickers-grid">
-                          <ColorPicker
-                            label="Primary Background"
-                            value={customColors.primaryBackground}
-                            onChange={(color) => setCustomColors({...customColors, primaryBackground: color})}
-                            description="Main app background"
-                          />
-                          <ColorPicker
-                            label="Secondary Background"
-                            value={customColors.secondaryBackground}
-                            onChange={(color) => setCustomColors({...customColors, secondaryBackground: color})}
-                            description="Panels and cards"
-                          />
-                          <ColorPicker
-                            label="Tertiary Background"
-                            value={customColors.tertiaryBackground}
-                            onChange={(color) => setCustomColors({...customColors, tertiaryBackground: color})}
-                            description="Inputs and dropdowns"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="color-category">
-                        <h3 className="color-category-title">Text Colors</h3>
-                        <div className="color-pickers-grid">
-                          <ColorPicker
-                            label="Primary Text"
-                            value={customColors.primaryText}
-                            onChange={(color) => setCustomColors({...customColors, primaryText: color})}
-                            description="Main text color"
-                          />
-                          <ColorPicker
-                            label="Secondary Text"
-                            value={customColors.secondaryText}
-                            onChange={(color) => setCustomColors({...customColors, secondaryText: color})}
-                            description="Muted text color"
-                          />
-                          <ColorPicker
-                            label="Accent Text"
-                            value={customColors.accentText}
-                            onChange={(color) => setCustomColors({...customColors, accentText: color})}
-                            description="Links and highlights"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="color-category">
-                        <h3 className="color-category-title">Interactive Colors</h3>
-                        <div className="color-pickers-grid">
-                          <ColorPicker
-                            label="Accent Color"
-                            value={customColors.accentColor}
-                            onChange={(color) => setCustomColors({...customColors, accentColor: color})}
-                            description="Buttons, sliders, highlights"
-                          />
-                          <ColorPicker
-                            label="Border Color"
-                            value={customColors.borderColor}
-                            onChange={(color) => setCustomColors({...customColors, borderColor: color})}
-                            description="Dividers and borders"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="color-category">
-                        <h3 className="color-category-title">Status Colors</h3>
-                        <div className="color-pickers-grid">
-                          <ColorPicker
-                            label="Success Color"
-                            value={customColors.successColor}
-                            onChange={(color) => setCustomColors({...customColors, successColor: color})}
-                            description="Valid states"
-                          />
-                          <ColorPicker
-                            label="Error Color"
-                            value={customColors.errorColor}
-                            onChange={(color) => setCustomColors({...customColors, errorColor: color})}
-                            description="Errors and warnings"
-                          />
-                          <ColorPicker
-                            label="Warning Color"
-                            value={customColors.warningColor}
-                            onChange={(color) => setCustomColors({...customColors, warningColor: color})}
-                            description="Warning states"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="color-category">
-                        <h3 className="color-category-title">Editor Colors</h3>
-                        <div className="color-pickers-grid">
-                          <ColorPicker
-                            label="Editor Background"
-                            value={customColors.editorBackground}
-                            onChange={(color) => setCustomColors({...customColors, editorBackground: color})}
-                            description="Text editor background"
-                          />
-                          <ColorPicker
-                            label="Editor Text"
-                            value={customColors.editorText}
-                            onChange={(color) => setCustomColors({...customColors, editorText: color})}
-                            description="Text editor text color"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </section>
-                )}
 
                 <section className="settings-section">
                   <h2 className="section-title">Editor</h2>
@@ -1010,7 +711,6 @@ Open
           errors={_errors}
           theme={theme}
           showTreeView={showTreeView}
-          customColors={customColors}
         />
           </div>
 
